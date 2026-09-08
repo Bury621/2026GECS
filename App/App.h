@@ -10,6 +10,8 @@
 #include "vofamanager.h"
 #include "../Hardware/SSD1306/ssd1306.h"
 #include "../Hardware/SSD1306/fonts.h"
+#include "string.h"
+#include "Emm.h"
 
 void App_Init(void);
 void App_Run(void);
