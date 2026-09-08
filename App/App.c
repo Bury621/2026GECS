@@ -1,9 +1,14 @@
 #include "App.h"
 
-uint8_t usart1_rx;
+//上下文
 vofamanager_csx vofamanager_t;
 Maxi_csx maxi_connect_t;
+Openmv_csx openmv_connect_t;
+
+//一些接收数据的变量
 volatile Maxi_posion_package Maxi_posion_data={.state=1}; //从maxicam得到的坐标数据
+volatile Openmv_package openmv_data={.state=1}; //从openmv得到的巡线数据
+uint8_t usart1_rx;
 int a;
 
 void App_Init(void)
@@ -12,8 +17,9 @@ void App_Init(void)
     HAL_Delay(500); //等待整个系统稳定
 
     //中间层初始化
-    VOFA_Init(&vofamanager_t);//初始化一下vofamanager
+    VOFA_Init(&vofamanager_t);
     Maxi_Init(&maxi_connect_t);
+    Openmv_Init(&openmv_connect_t);
 
     //硬件初始化
     ssd1306_Init(&hi2c2);
@@ -31,6 +37,9 @@ void App_Run(void)
     if(HAL_GetTick() - last_update > 100)
     {
         last_update = HAL_GetTick();
+
+        //处理视觉给来的数据包
+        /*
         if(Maxi_posion_data.state==0)
         {
             sprintf(buffer,"%d %d",Maxi_posion_data.x,Maxi_posion_data.y);
@@ -39,6 +48,15 @@ void App_Run(void)
             ssd1306_WriteString(buffer,Font_7x10,White);
             ssd1306_UpdateScreen(&hi2c2);
         }
+        if(openmv_data.state==0)
+        {
+            sprintf(buffer,"%d %d",openmv_data.line_error,openmv_data.turning_state);
+            ssd1306_Fill(Black);
+            ssd1306_SetCursor(0,0);
+            ssd1306_WriteString(buffer,Font_7x10,White);
+            ssd1306_UpdateScreen(&hi2c2);
+        }
+        */
     }
 }
 //收到调试包
@@ -68,14 +86,23 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         HAL_UART_Receive_IT(&huart1,&usart1_rx,1);
     }
 }
-//DMA中断
+//DMA空闲中断
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
-    Led_on();
-    if (huart->Instance == USART6 && HAL_UARTEx_GetRxEventType(huart) == HAL_UART_RXEVENT_IDLE)
+    
+    if(HAL_UARTEx_GetRxEventType(huart) == HAL_UART_RXEVENT_IDLE)
     {
-        //处理中断
-        Maxi_posion_data=Maxi_Feed(&maxi_connect_t,Size); //喂数据
-        HAL_UARTEx_ReceiveToIdle_DMA(&MAXI_UART, maxi_connect_t.rx_buf, MAXI_CONNECT_RX_BUFFER_SIZE); //别忘了重启DMA接收
+        if (huart->Instance == USART6)
+        {
+            Led_on();
+            Maxi_posion_data=Maxi_Feed(&maxi_connect_t,Size); //喂数据
+            HAL_UARTEx_ReceiveToIdle_DMA(&MAXI_UART, maxi_connect_t.rx_buf, MAXI_CONNECT_RX_BUFFER_SIZE); //重启DMA接收
+        }
+        if(huart->Instance == UART5)
+        {
+            
+            openmv_data=Openmv_Feed(&openmv_connect_t,Size); //喂数据
+            HAL_UARTEx_ReceiveToIdle_DMA(&OPENMV_UART, openmv_connect_t.rx_buf, OPENMV_CONNECT_RX_BUFFER_SIZE); //重启DMA接收
+        }
     }
 }

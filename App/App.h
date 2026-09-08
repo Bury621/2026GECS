@@ -13,6 +13,7 @@
 #include "string.h"
 #include "Emm.h"
 #include "Maxi_Connect.h"
+#include "Openmv_Connect.h"
 
 void App_Init(void);
 void App_Run(void);
