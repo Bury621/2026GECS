@@ -1,19 +1,24 @@
 #ifndef __APP_H
 #define __APP_H
 
+#include "string.h"
+
 #include "main.h"
 #include "Debug.h"
+
 #include "Led.h"
 #include "button.h"
 #include "Servo.h"
-#include "protoflow.h"
-#include "vofamanager.h"
+#include "Ray.h"
+#include "Emm.h"
+
 #include "../Hardware/SSD1306/ssd1306.h"
 #include "../Hardware/SSD1306/fonts.h"
-#include "string.h"
-#include "Emm.h"
+
 #include "Maxi_Connect.h"
 #include "Openmv_Connect.h"
+#include "protoflow.h"
+#include "vofamanager.h"
 
 void App_Init(void);
 void App_Run(void);

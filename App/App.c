@@ -14,7 +14,7 @@ int a;
 void App_Init(void)
 {
     printf("Booting\r\n");
-    HAL_Delay(500); //等待整个系统稳定
+    HAL_Delay(2000); //等待整个系统稳定
 
     //中间层初始化
     VOFA_Init(&vofamanager_t);
@@ -24,16 +24,20 @@ void App_Init(void)
     //硬件初始化
     ssd1306_Init(&hi2c2);
     ssd1306_Fill(Black);
+    ssd1306_WriteString("Bury",Font_16x26,White);
+    ssd1306_UpdateScreen(&hi2c2);
 
-    Emm_Speed_Mode(0x01,0,0,EMM_SYNC_DISABLE);
+    Emm_Speed_Mode(0x01,200,100,EMM_SYNC_DISABLE);
 
     HAL_UART_Receive_IT(&huart1,&usart1_rx,1); //开启串口中断接收
+
+    HAL_GPIO_WritePin(GPIOG,GPIO_PIN_2,1);
 }
 void App_Run(void)
 {
     static uint32_t last_update = 0;
     char buffer[128];
-
+    
     if(HAL_GetTick() - last_update > 100)
     {
         last_update = HAL_GetTick();
@@ -58,6 +62,7 @@ void App_Run(void)
         }
         */
     }
+
 }
 //收到调试包
 void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
