@@ -27,11 +27,17 @@ void App_Init(void)
     ssd1306_WriteString("Bury",Font_16x26,White);
     ssd1306_UpdateScreen(&hi2c2);
 
+    Servo_Init();
+    Servo_Set(90);
+    
+
     Emm_Speed_Mode(0x01,200,100,EMM_SYNC_DISABLE);
 
     HAL_UART_Receive_IT(&huart1,&usart1_rx,1); //开启串口中断接收
 
     HAL_GPIO_WritePin(GPIOG,GPIO_PIN_2,1);
+
+    
 }
 void App_Run(void)
 {
@@ -74,7 +80,8 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
         if(strcmp(sign,"motor")==0)
         {
             a=(int)data;
-            Emm_Speed_Mode(0x01,a,0,EMM_SYNC_DISABLE);
+            //Emm_Speed_Mode(0x01,a,0,EMM_SYNC_DISABLE);
+            Servo_Set(a);
         }
         if(strcmp(sign,"Home")==0)
         {
