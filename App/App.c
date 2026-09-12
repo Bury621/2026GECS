@@ -4,6 +4,7 @@
 vofamanager_csx vofamanager_t;
 Maxi_csx maxi_connect_t;
 Openmv_csx openmv_connect_t;
+DMG6220 dmg6220;
 
 //一些接收数据的变量
 volatile Maxi_posion_package Maxi_posion_data={.state=1}; //从maxicam得到的坐标数据
@@ -13,6 +14,16 @@ int a;
 
 void App_Init(void)
 {
+    DMG6220_Init(&dmg6220, &hcan1, 0x01, 0x00);
+    DMG6220_SendCommand(&dmg6220, DMG6220_CMD_ENABLE);
+    HAL_Delay(1000);
+    DMG6220_SendMit(&dmg6220,
+                  1.5708f,
+                  0.0f,
+                  0.5f,
+                  0.05f,
+                  0.0f);
+
     printf("Booting\r\n");
     HAL_Delay(2000); //等待整个系统稳定
 

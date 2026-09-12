@@ -10,6 +10,7 @@
 #include "button.h"
 #include "Servo.h"
 #include "Ray.h"
+#include "DMG6220.h"
 #include "Emm.h"
 
 #include "../Hardware/SSD1306/ssd1306.h"
@@ -27,5 +28,5 @@ extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart6;
 extern I2C_HandleTypeDef hi2c1;
 extern I2C_HandleTypeDef hi2c2;
-
+extern CAN_HandleTypeDef hcan1;
 #endif
