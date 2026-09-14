@@ -15,6 +15,7 @@
 
 #include "../Hardware/SSD1306/ssd1306.h"
 #include "../Hardware/SSD1306/fonts.h"
+#include "gyro_integrate.h"
 
 #include "Maxi_Connect.h"
 #include "Openmv_Connect.h"
@@ -29,4 +30,5 @@ extern UART_HandleTypeDef huart6;
 extern I2C_HandleTypeDef hi2c1;
 extern I2C_HandleTypeDef hi2c2;
 extern CAN_HandleTypeDef hcan1;
+extern TIM_HandleTypeDef htim7;
 #endif
