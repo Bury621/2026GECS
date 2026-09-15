@@ -22,7 +22,7 @@ void App_Init(void)
     DMG6220_Enable(&dmg6220_t);
     DMG6220_MoveAngle(&dmg6220_t, 90.0f, 0.0f);
 
-    //printf("Booting\r\n");
+    printf("Booting\r\n");
     
     HAL_Delay(1000); //等待整个系统稳定
 
@@ -86,8 +86,8 @@ void App_Run(void)
 //收到调试包
 void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
 {
-    Led_on();
-    Led_off();
+    // Led_on();
+    // Led_off();
     if(csx==&vofamanager_t)
     {
         if(strcmp(sign,"motor")==0)

@@ -1,9 +1,9 @@
 #ifndef __APP_H
 #define __APP_H
 
-#include "string.h"
-
 #include "main.h"
+
+#include "string.h"
 #include "Debug.h"
 
 #include "Led.h"
@@ -12,14 +12,12 @@
 #include "Ray.h"
 #include "DMG6220.h"
 #include "Emm.h"
-
 #include "../Hardware/SSD1306/ssd1306.h"
 #include "../Hardware/SSD1306/fonts.h"
 #include "gyro_integrate.h"
 
 #include "Maxi_Connect.h"
 #include "Openmv_Connect.h"
-#include "protoflow.h"
 #include "vofamanager.h"
 
 void App_Init(void);
