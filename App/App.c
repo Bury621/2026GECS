@@ -1,7 +1,5 @@
 #include "App.h"
 
-extern CAN_HandleTypeDef hcan1;
-
 //上下文
 vofamanager_csx vofamanager_t;
 Maxi_csx maxi_connect_t;
@@ -48,7 +46,7 @@ void App_Init(void)
 
     //Emm_Speed_Mode(0x01,3000,100,EMM_SYNC_DISABLE);
 
-    HAL_TIM_Base_Start_IT(&htim7);
+    //HAL_TIM_Base_Start_IT(&htim7);
     HAL_UART_Receive_IT(&huart1,&usart1_rx,1); //开启串口中断接收
 }
 void App_Run(void)
