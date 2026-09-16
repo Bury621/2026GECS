@@ -29,7 +29,7 @@ void App_Init(void)
     //中间层初始化
     VOFA_Init(&vofamanager_t);
     Maxi_Init(&maxi_connect_t);
-    //Openmv_Init(&openmv_connect_t);
+    Openmv_Init(&openmv_connect_t);
 
     //硬件初始化
     ssd1306_Init(&hi2c2);
@@ -37,7 +37,7 @@ void App_Init(void)
     ssd1306_WriteString("Bury",Font_16x26,White);
     ssd1306_UpdateScreen(&hi2c2);
 
-    hwt101_Init(&hwt101_t,&huart5);
+    hwt101_Init(&hwt101_t,&huart2);
 
     //Gyro_integrate_Init(&mpu6050_t);
 
@@ -99,7 +99,7 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
         {
             //Emm_Home(0x01,EMM_SYNC_DISABLE);
             float data;
-            hwt101_read_yaw(&hwt101_t,&data);
+            if(hwt101_read_yaw(&hwt101_t,&data)!=0) return;
             printf("%.2f\r\n",data);
         }
     }
@@ -116,36 +116,30 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 //DMA空闲中断
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
-    
-    if(HAL_UARTEx_GetRxEventType(huart) == HAL_UART_RXEVENT_IDLE)
+    HAL_UART_RxEventTypeTypeDef event = HAL_UARTEx_GetRxEventType(huart);
+
+    if (huart->Instance == USART6 && event == HAL_UART_RXEVENT_IDLE)
     {
-        if (huart->Instance == USART6)
-        {
-            Led_on();
-            Maxi_posion_data=Maxi_Feed(&maxi_connect_t,Size); //喂数据
-            HAL_UARTEx_ReceiveToIdle_DMA(&MAXI_UART, maxi_connect_t.rx_buf, MAXI_CONNECT_RX_BUFFER_SIZE); //重启DMA接收
-        }
-        // if(huart->Instance == UART5)
-        // {
-            
-        //     openmv_data=Openmv_Feed(&openmv_connect_t,Size); //喂数据
-        //     HAL_UARTEx_ReceiveToIdle_DMA(&OPENMV_UART, openmv_connect_t.rx_buf, OPENMV_CONNECT_RX_BUFFER_SIZE); //重启DMA接收
-        // }
-        //这里记得改成hwt101实际连接的串口，这里还没改随便用了一个
-        if(huart->Instance == UART5)
-        {
-            //这个驱动我学聪明了自动重启串口了，不用搞那些乱七八糟的东西了一行就行了
-            hwt101_Feed(&hwt101_t,Size);
-            Led_on();
-        }
-    } 
+        Led_on();
+        Maxi_posion_data=Maxi_Feed(&maxi_connect_t,Size); //喂数据
+        HAL_UARTEx_ReceiveToIdle_DMA(&MAXI_UART, maxi_connect_t.rx_buf, MAXI_CONNECT_RX_BUFFER_SIZE); //重启DMA接收
+    }
+    if(huart->Instance == UART5)
+    {
+        
+        openmv_data=Openmv_Feed(&openmv_connect_t,Size); //喂数据
+        HAL_UARTEx_ReceiveToIdle_DMA(&OPENMV_UART, openmv_connect_t.rx_buf, OPENMV_CONNECT_RX_BUFFER_SIZE); //重启DMA接收
+    }
+    /* HWT101连续输出时不一定产生IDLE事件。缓冲区收满11字节时，
+       使用TC事件结束本帧，并立即重启下一帧接收。 */
+    if (huart->Instance == USART2 &&
+        (event == HAL_UART_RXEVENT_IDLE || event == HAL_UART_RXEVENT_TC))
+    {
+        hwt101_Feed(&hwt101_t,Size);
+        Led_on();
+    }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    if(htim->Instance==TIM7)
-    {
-        //update=1;
-        
-    }
 }
