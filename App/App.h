@@ -14,7 +14,7 @@
 #include "Emm.h"
 #include "../Hardware/SSD1306/ssd1306.h"
 #include "../Hardware/SSD1306/fonts.h"
-#include "gyro_integrate.h"
+#include "hwt101.h"
 
 #include "Maxi_Connect.h"
 #include "Openmv_Connect.h"

@@ -3,6 +3,7 @@
 
 #include "../Hardware/mpu6050/driver_mpu6050.h"
 #include "../Hardware/mpu6050/driver_mpu6050_interface.h"
+#include "main.h"
 
 #define GYRO_INTEGRATE_UPDATE_CYCLE 10 //积分周期,单位ms
 #define GYRO_INTEGRATE_BASIC_YAW 0.341786 //零偏校准量

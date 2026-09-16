@@ -17,7 +17,6 @@ void Gyro_integrate_Init(mpu6050_handle_t *csx)
     DRIVER_MPU6050_LINK_RECEIVE_CALLBACK(csx, mpu6050_interface_receive_callback);
     csx->iic_addr=MPU6050_ADDRESS_AD0_LOW;
     mpu6050_init(csx);
-
     
 }
 /**

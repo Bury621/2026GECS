@@ -2,7 +2,5 @@
 
 #define __ROBOT_H
 
-typedef enum{
-    
-}Robot_state;
+
 #endif
