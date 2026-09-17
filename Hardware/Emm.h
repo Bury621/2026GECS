@@ -4,7 +4,7 @@
 #include "stdint.h"
 #include "main.h"
 
-#define EMM_UART huart3
+#define EMM_UART huart2
 extern UART_HandleTypeDef EMM_UART;
 typedef enum{
 	EMM_DIR_CW=0,

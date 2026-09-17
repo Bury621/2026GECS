@@ -30,10 +30,10 @@ void App_Init(void)
     Openmv_Init(&openmv_connect_t);
 
     //硬件初始化
-    ssd1306_Init(&hi2c2);
-    ssd1306_Fill(Black);
-    ssd1306_WriteString("Bury",Font_16x26,White);
-    ssd1306_UpdateScreen(&hi2c2);
+    // ssd1306_Init(&hi2c2);
+    // ssd1306_Fill(Black);
+    // ssd1306_WriteString("Bury",Font_16x26,White);
+    // ssd1306_UpdateScreen(&hi2c2);
 
     hwt101_Init(&hwt101_t,&huart2);
 
@@ -48,6 +48,10 @@ void App_Init(void)
 
     //HAL_TIM_Base_Start_IT(&htim7);
     HAL_UART_Receive_IT(&huart1,&usart1_rx,1); //开启串口中断接收
+
+    Robot_set_move(100,100,50);
+    Led_on();
+
 }
 void App_Run(void)
 {

@@ -13,7 +13,7 @@
 #define WHEEL_MAX_SPEED  3000
 
 /* 方向修正：1 保持，-1 取反，按实际调试修改 */
-static const int8_t dir_fix[4] = { 1, 1, 1, 1 };
+static const int8_t dir_fix[4] = { 1, -1, 1, -1 };
 
 /**
  * @brief 设置小车的运动状态（X型麦克纳姆轮）
@@ -29,10 +29,10 @@ static const int8_t dir_fix[4] = { 1, 1, 1, 1 };
 void Robot_set_move(int16_t vx, int16_t vy, int16_t omega)
 {
     /* X型麦克纳姆轮速度分解 */
-    int32_t w1 = (int32_t)vx - vy - omega;   /* 左前 */
-    int32_t w2 = (int32_t)vx + vy + omega;   /* 右前 */
-    int32_t w3 = (int32_t)vx + vy - omega;   /* 左后 */
-    int32_t w4 = (int32_t)vx - vy + omega;   /* 右后 */
+    int32_t w1 = (int32_t)vx + vy - omega;   /* 左前 */
+    int32_t w2 = (int32_t)vx - vy + omega;   /* 右前 */
+    int32_t w3 = (int32_t)vx - vy - omega;   /* 左后 */
+    int32_t w4 = (int32_t)vx + vy + omega;   /* 右后 */
 
     /* 四个轮子的原始值 */
     int32_t raw[4] = { w1, w2, w3, w4 };
@@ -58,8 +58,12 @@ void Robot_set_move(int16_t vx, int16_t vy, int16_t omega)
 
     /* 依次发送给四个电机，addr 对应轮子编号 */
     Emm_Speed_Mode(WHEEL_LF, raw[0], MOVE_ACCEL, EMM_SYNC_ENABLE);
+    HAL_Delay(ROBOT_MOVE_SET_MOTOR_DELAY);
     Emm_Speed_Mode(WHEEL_RF, raw[1], MOVE_ACCEL, EMM_SYNC_ENABLE);
+    HAL_Delay(ROBOT_MOVE_SET_MOTOR_DELAY);
     Emm_Speed_Mode(WHEEL_LR, raw[2], MOVE_ACCEL, EMM_SYNC_ENABLE);
+    HAL_Delay(ROBOT_MOVE_SET_MOTOR_DELAY);
     Emm_Speed_Mode(WHEEL_RR, raw[3], MOVE_ACCEL, EMM_SYNC_ENABLE);
+    HAL_Delay(ROBOT_MOVE_SET_MOTOR_DELAY);
     Emm_Sync_Trig();
 }
