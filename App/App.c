@@ -16,10 +16,6 @@ volatile uint8_t update=0;
 
 void App_Init(void)
 {
-    DMG6220_Init(&dmg6220_t, &hcan1, 0x01);
-    DMG6220_Enable(&dmg6220_t);
-    DMG6220_MoveAngle(&dmg6220_t, 90.0f, 0.0f);
-
     printf("Booting\r\n");
     
     HAL_Delay(1000); //等待整个系统稳定
@@ -30,28 +26,29 @@ void App_Init(void)
     Openmv_Init(&openmv_connect_t);
 
     //硬件初始化
-    // ssd1306_Init(&hi2c2);
-    // ssd1306_Fill(Black);
-    // ssd1306_WriteString("Bury",Font_16x26,White);
-    // ssd1306_UpdateScreen(&hi2c2);
+    ssd1306_Init(&hi2c2);
+    ssd1306_Fill(Black);
+    ssd1306_WriteString("Bury",Font_16x26,White);
+    ssd1306_UpdateScreen(&hi2c2);
 
     hwt101_Init(&hwt101_t,&huart2);
+    HAL_Delay(100);
+    hwt101_reset_yaw(&hwt101_t);
 
     //Gyro_integrate_Init(&mpu6050_t);
 
     Servo_Init();
     Servo_Set(90);
 
+    DMG6220_Init(&dmg6220_t, &hcan1, 0x01);
+    DMG6220_Enable(&dmg6220_t);
+    DMG6220_MoveAngle(&dmg6220_t, 180.0f, 0.0f);
     //Emm_Home(0x01,EMM_SYNC_DISABLE);
-
-    //Emm_Speed_Mode(0x01,3000,100,EMM_SYNC_DISABLE);
 
     //HAL_TIM_Base_Start_IT(&htim7);
     HAL_UART_Receive_IT(&huart1,&usart1_rx,1); //开启串口中断接收
 
-    Robot_set_move(100,100,50);
-    Led_on();
-
+    //Robot_set_move(3000,0,0);
 }
 void App_Run(void)
 {
@@ -95,14 +92,25 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
         {
             a=(int)data;
             //Emm_Speed_Mode(0x01,a,0,EMM_SYNC_DISABLE);
+            //Servo_Set(a);
+            DMG6220_MoveAngle(&dmg6220_t, a, 0.0f);
+        }
+        if(strcmp(sign,"servo")==0)
+        {
+            a=(int)data;
+            //Emm_Speed_Mode(0x01,a,0,EMM_SYNC_DISABLE);
             Servo_Set(a);
         }
-        if(strcmp(sign,"Home")==0)
+        if(strcmp(sign,"Get_yaw")==0)
         {
             //Emm_Home(0x01,EMM_SYNC_DISABLE);
             float data;
-            if(hwt101_read_yaw(&hwt101_t,&data)!=0) return;
+            hwt101_read_yaw(&hwt101_t,&data);
             printf("%.2f\r\n",data);
+        }
+        if(strcmp(sign,"Reset_mcu")==0)
+        {
+            HAL_NVIC_SystemReset();
         }
     }
 }
@@ -122,7 +130,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 
     if (huart->Instance == USART6 && event == HAL_UART_RXEVENT_IDLE)
     {
-        Led_on();
         Maxi_posion_data=Maxi_Feed(&maxi_connect_t,Size); //喂数据
         HAL_UARTEx_ReceiveToIdle_DMA(&MAXI_UART, maxi_connect_t.rx_buf, MAXI_CONNECT_RX_BUFFER_SIZE); //重启DMA接收
     }
@@ -138,7 +145,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         (event == HAL_UART_RXEVENT_IDLE || event == HAL_UART_RXEVENT_TC))
     {
         hwt101_Feed(&hwt101_t,Size);
-        Led_on();
     }
 }
 
