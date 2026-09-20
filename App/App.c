@@ -99,13 +99,13 @@ void App_Init(void)
     Maxi_Init(&maxi_connect_t);
     Openmv_Init(&openmv_connect_t);
     PIDController_Init(&robot_angle_pid_t);
-    robot_angle_pid_t.Kp=0.0f;
+    robot_angle_pid_t.Kp=6.81f;
     robot_angle_pid_t.Ki=0.0f;
-    robot_angle_pid_t.Kd=0.0f;
+    robot_angle_pid_t.Kd=3.91f;
     robot_angle_pid_t.tau=0.05f;
-    robot_angle_pid_t.deadband=2.0f;
-    robot_angle_pid_t.limMin=-300.0f;
-    robot_angle_pid_t.limMax=300.0f;
+    robot_angle_pid_t.deadband=1.5f;
+    robot_angle_pid_t.limMin=-1000.0f;
+    robot_angle_pid_t.limMax=1000.0f;
     robot_angle_pid_t.limMinInt=-20.0f;
     robot_angle_pid_t.limMaxInt=20.0f;
     robot_angle_pid_t.T=0.01f;
@@ -131,12 +131,11 @@ void App_Init(void)
     HAL_TIM_Base_Start_IT(&htim7); //开启tim7
     HAL_UART_Receive_IT(&huart1,&usart1_rx,1); //开启串口中断接收
 
-    robot_angle=90;
 }
 void App_Run(void)
 {
-    Robot_remote_control();
-    if(robot_angle_update_sign==1)
+    Robot_remote_control(); //处理遥控
+    if(robot_angle_update_sign==1) //动态更新角度
     {
         robot_angle_update_sign=0;
         Robot_Angle_Update();
@@ -173,7 +172,6 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
         }
         if(strcmp(sign,"forward")==0)
         {
-            
             if(((int)data)==1)
             {
                 remote_sign=1;
@@ -185,7 +183,6 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
         }
         if(strcmp(sign,"backward")==0)
         {
-            
             if(((int)data)==1)
             {
                 remote_sign=2;
@@ -197,7 +194,6 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
         }
         if(strcmp(sign,"left")==0)
         {
-            
             if(((int)data)==1)
             {
                 remote_sign=3;
@@ -209,7 +205,6 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
         }
         if(strcmp(sign,"right")==0)
         {
-            
             if(((int)data)==1)
             {
                 remote_sign=4;
@@ -239,6 +234,10 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
         if(strcmp(sign,"angle")==0)
         {
             robot_angle=data;
+        }
+        if(strcmp(sign,"turn")==0)
+        {
+            robot_angle=(robot_angle+90) % 360;
         }
     }
 }
@@ -280,7 +279,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if(htim->Instance==TIM7)
     {
-        Led_toggle();
         robot_angle_update_sign=1; //置标志位，更新角度环
     }
 }
