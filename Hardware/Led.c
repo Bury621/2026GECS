@@ -9,3 +9,7 @@ void Led_off(void)
 {
     HAL_GPIO_WritePin(LED_GPIO_Port,LED_Pin,1);
 }
+void Led_toggle(void)
+{
+    HAL_GPIO_TogglePin(LED_GPIO_Port,LED_Pin);
+}

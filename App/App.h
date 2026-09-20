@@ -16,6 +16,7 @@
 #include "../Hardware/SSD1306/fonts.h"
 #include "hwt101.h"
 
+#include "PID.h"
 #include "Maxi_Connect.h"
 #include "Openmv_Connect.h"
 #include "vofamanager.h"
@@ -30,6 +31,7 @@ extern UART_HandleTypeDef huart6;
 extern I2C_HandleTypeDef hi2c1;
 extern I2C_HandleTypeDef hi2c2;
 extern CAN_HandleTypeDef hcan1;
+extern TIM_HandleTypeDef htim7;
 
 //extern TIM_HandleTypeDef htim7;
 #endif
