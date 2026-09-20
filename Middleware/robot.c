@@ -16,25 +16,20 @@
 /* 方向修正：1 保持，-1 取反，按实际调试修改 */
 static const int8_t dir_fix[4] = { -1, 1, -1, 1 };
 
+/* 缓存三个运动分量，单轴更新时保留其他分量 */
+static int16_t robot_vx = 0;
+static int16_t robot_vy = 0;
+static int16_t robot_omega = 0;
+
 Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
-/**
- * @brief 设置小车的运动状态（X型麦克纳姆轮）
- *
- * 轮子布局:
- *     1  2
- *     3  4
- *
- * @param vx    前后速度，向前为正
- * @param vy    左右速度，向右为正
- * @param omega 旋转速度，逆时针为正
- */
-void Robot_set_move(int16_t vx, int16_t vy, int16_t omega)
+
+static void Robot_update_move(void)
 {
     /* X型麦克纳姆轮速度分解 */
-    int32_t w1 = (int32_t)vx + vy - omega;   /* 左前 */
-    int32_t w2 = (int32_t)vx - vy + omega;   /* 右前 */
-    int32_t w3 = (int32_t)vx - vy - omega;   /* 左后 */
-    int32_t w4 = (int32_t)vx + vy + omega;   /* 右后 */
+    int32_t w1 = (int32_t)robot_vx + robot_vy - robot_omega;   /* 左前 */
+    int32_t w2 = (int32_t)robot_vx - robot_vy + robot_omega;   /* 右前 */
+    int32_t w3 = (int32_t)robot_vx - robot_vy - robot_omega;   /* 左后 */
+    int32_t w4 = (int32_t)robot_vx + robot_vy + robot_omega;   /* 右后 */
 
     /* 四个轮子的原始值 */
     int32_t raw[4] = { w1, w2, w3, w4 };
@@ -70,38 +65,67 @@ void Robot_set_move(int16_t vx, int16_t vy, int16_t omega)
     Emm_Sync_Trig();
 }
 
+/**
+ * @brief 设置小车的运动状态（X型麦克纳姆轮）
+ *
+ * 轮子布局:
+ *     1  2
+ *     3  4
+ *
+ * @param vx    前后速度，向前为正
+ * @param vy    左右速度，向右为正
+ * @param omega 旋转速度，逆时针为正
+ */
+void Robot_set_move(int16_t vx, int16_t vy, int16_t omega)
+{
+    robot_vx = vx;
+    robot_vy = vy;
+    robot_omega = omega;
+    Robot_update_move();
+}
+
+void Robot_set_vx(int16_t vx)
+{
+    robot_vx = vx;
+    Robot_update_move();
+}
+
+void Robot_set_vy(int16_t vy)
+{
+    robot_vy = vy;
+    Robot_update_move();
+}
+
+void Robot_set_omega(int16_t omega)
+{
+    robot_omega = omega;
+    Robot_update_move();
+}
+
 void Robot_stop_move(void)
 {
-    Emm_Speed_Mode(WHEEL_LF, 0, 0, EMM_SYNC_ENABLE);
-    HAL_Delay(ROBOT_MOVE_SET_MOTOR_DELAY);
-    Emm_Speed_Mode(WHEEL_RF, 0, 0, EMM_SYNC_ENABLE);
-    HAL_Delay(ROBOT_MOVE_SET_MOTOR_DELAY);
-    Emm_Speed_Mode(WHEEL_LR, 0, 0, EMM_SYNC_ENABLE);
-    HAL_Delay(ROBOT_MOVE_SET_MOTOR_DELAY);
-    Emm_Speed_Mode(WHEEL_RR, 0, 0, EMM_SYNC_ENABLE);
-    HAL_Delay(ROBOT_MOVE_SET_MOTOR_DELAY);
-    Emm_Sync_Trig();
+    Robot_set_move(0,0,0);
 }
 void Robot_remote_control(void)
 {
     if(remote_sign==ROBOT_REMOTE_FORWARD)
     {
-        Robot_set_move(ROBOT_REMOTE_CONTROL_SPEED,0,0);
+        Robot_set_vx(ROBOT_REMOTE_CONTROL_SPEED);
         remote_sign=0;
     }
     if(remote_sign==ROBOT_REMOTE_BACKWARD)
     {
-        Robot_set_move(-ROBOT_REMOTE_CONTROL_SPEED,0,0);
+        Robot_set_vx(-ROBOT_REMOTE_CONTROL_SPEED);
         remote_sign=0;
     }
     if(remote_sign==ROBOT_REMOTE_LEFT)
     {
-        Robot_set_move(0,-ROBOT_REMOTE_CONTROL_SPEED,0);
+        Robot_set_vy(-ROBOT_REMOTE_CONTROL_SPEED);
         remote_sign=0;
     }
     if(remote_sign==ROBOT_REMOTE_RIGHT)
     {
-        Robot_set_move(0,ROBOT_REMOTE_CONTROL_SPEED,0);
+        Robot_set_vy(ROBOT_REMOTE_CONTROL_SPEED);
         remote_sign=0;
     }
     else if(remote_sign==ROBOT_REMOTE_TO_STOP)

@@ -15,6 +15,9 @@ typedef enum{
     ROBOT_REMOTE_TO_STOP=255
 }Robot_remote_sign;
 void Robot_set_move(int16_t vx,int16_t vy,int16_t omega);
+void Robot_set_vx(int16_t vx);
+void Robot_set_vy(int16_t vy);
+void Robot_set_omega(int16_t omega);
 void Robot_stop_move(void);
 void Robot_remote_control();
 

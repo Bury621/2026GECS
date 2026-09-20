@@ -16,10 +16,77 @@ int a;
 
 //标志位
 extern Robot_remote_sign remote_sign; //小车遥控标志位
-uint8_t robot_angle_update_sign=0; //角度环更新标志位
+volatile uint8_t robot_angle_update_sign=0; //角度环更新标志位
 
 //一些变量
-uint16_t robot_angle=0; //角度环的目标角度
+volatile uint16_t robot_angle=0; //角度环的目标角度
+static float robot_angle_continuous=0.0f; //展开后的连续角度
+static float robot_angle_last_yaw=0.0f;
+static float robot_angle_last_omega=0.0f;
+static uint8_t robot_angle_has_yaw=0;
+
+static void Robot_Angle_Update(void)
+{
+    float angle_sensor_data;
+    if(hwt101_read_yaw(&hwt101_t,&angle_sensor_data)!=0)
+    {
+        return;
+    }
+
+    if(robot_angle_has_yaw==0)
+    {
+        robot_angle_continuous=angle_sensor_data;
+        robot_angle_last_yaw=angle_sensor_data;
+        robot_angle_has_yaw=1;
+        robot_angle_pid_t.prevMeasurement=robot_angle_continuous;
+    }
+    else
+    {
+        float delta_angle=angle_sensor_data-robot_angle_last_yaw;
+        if(delta_angle>180.0f)
+        {
+            delta_angle-=360.0f;
+        }
+        else if(delta_angle<-180.0f)
+        {
+            delta_angle+=360.0f;
+        }
+        robot_angle_continuous+=delta_angle;
+        robot_angle_last_yaw=angle_sensor_data;
+    }
+
+    int16_t target_angle=(int16_t)((int32_t)robot_angle%360);
+    if(target_angle>180)
+    {
+        target_angle-=360;
+    }
+
+    float target_error=(float)target_angle-robot_angle_continuous;
+    while(target_error>180.0f)
+    {
+        target_error-=360.0f;
+    }
+    while(target_error<-180.0f)
+    {
+        target_error+=360.0f;
+    }
+
+    float target_setpoint=robot_angle_continuous+target_error;
+    float angle_pid_output=PIDController_Update(&robot_angle_pid_t,target_setpoint,robot_angle_continuous);
+    /* HWT101 的正向与本车 omega 的正向相反 */
+    float omega_output=-angle_pid_output;
+    float omega_delta=omega_output-robot_angle_last_omega;
+    if(omega_delta>10.0f)
+    {
+        omega_output=robot_angle_last_omega+10.0f;
+    }
+    else if(omega_delta<-10.0f)
+    {
+        omega_output=robot_angle_last_omega-10.0f;
+    }
+    robot_angle_last_omega=omega_output;
+    Robot_set_omega((int16_t)omega_output);
+}
 
 void App_Init(void)
 {
@@ -32,6 +99,16 @@ void App_Init(void)
     Maxi_Init(&maxi_connect_t);
     Openmv_Init(&openmv_connect_t);
     PIDController_Init(&robot_angle_pid_t);
+    robot_angle_pid_t.Kp=0.0f;
+    robot_angle_pid_t.Ki=0.0f;
+    robot_angle_pid_t.Kd=0.0f;
+    robot_angle_pid_t.tau=0.05f;
+    robot_angle_pid_t.deadband=2.0f;
+    robot_angle_pid_t.limMin=-300.0f;
+    robot_angle_pid_t.limMax=300.0f;
+    robot_angle_pid_t.limMinInt=-20.0f;
+    robot_angle_pid_t.limMaxInt=20.0f;
+    robot_angle_pid_t.T=0.01f;
 
     //硬件初始化
     ssd1306_Init(&hi2c2);
@@ -54,7 +131,7 @@ void App_Init(void)
     HAL_TIM_Base_Start_IT(&htim7); //开启tim7
     HAL_UART_Receive_IT(&huart1,&usart1_rx,1); //开启串口中断接收
 
-    
+    robot_angle=90;
 }
 void App_Run(void)
 {
@@ -62,12 +139,11 @@ void App_Run(void)
     if(robot_angle_update_sign==1)
     {
         robot_angle_update_sign=0;
+        Robot_Angle_Update();
 
-        float angle_sensor_data;
-        hwt101_read_yaw(&hwt101_t,&angle_sensor_data);//从传感器读取现在的角度
-
-        float robot_angle_pid_output=(int16_t)PIDController_Update(&robot_angle_pid_t,robot_angle,angle_sensor_data);
-        //Robot_set_move(0,0,robot_angle_pid_output); //角度环生效
+        float data;
+        hwt101_read_yaw(&hwt101_t,&data);
+        printf("%.2f\r\n",data);
     }
 }
 //收到调试包
@@ -149,20 +225,20 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
         }
         if(strcmp(sign,"Kp")==0)
         {
-            PIDController_Init(&robot_angle_pid_t);
             robot_angle_pid_t.Kp=data;
         }
         if(strcmp(sign,"Ki")==0)
         {
-            PIDController_Init(&robot_angle_pid_t);
             robot_angle_pid_t.Ki=data;
             
         }
         if(strcmp(sign,"Kd")==0)
         {
-            PIDController_Init(&robot_angle_pid_t);
-            robot_angle_pid_t.Kd=data;
-            
+            robot_angle_pid_t.Kd=data; 
+        }
+        if(strcmp(sign,"angle")==0)
+        {
+            robot_angle=data;
         }
     }
 }
