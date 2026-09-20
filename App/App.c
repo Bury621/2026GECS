@@ -14,6 +14,8 @@ uint8_t usart1_rx;
 int a;
 volatile uint8_t update=0;
 
+extern Robot_remote_sign remote_sign; //小车遥控标志位
+
 void App_Init(void)
 {
     printf("Booting\r\n");
@@ -28,82 +30,42 @@ void App_Init(void)
     //硬件初始化
     ssd1306_Init(&hi2c2);
     ssd1306_Fill(Black);
-    ssd1306_WriteString("Bury",Font_16x26,White);
+    ssd1306_WriteString("Bury666",Font_16x26,White);
     ssd1306_UpdateScreen(&hi2c2);
 
     hwt101_Init(&hwt101_t,&huart2);
     HAL_Delay(100);
     hwt101_reset_yaw(&hwt101_t);
 
-    //Gyro_integrate_Init(&mpu6050_t);
-
     Servo_Init();
-    Servo_Set(90);
 
     DMG6220_Init(&dmg6220_t, &hcan1, 0x01);
     DMG6220_Enable(&dmg6220_t);
-    DMG6220_MoveAngle(&dmg6220_t, 180.0f, 0.0f);
-    //Emm_Home(0x01,EMM_SYNC_DISABLE);
 
     //HAL_TIM_Base_Start_IT(&htim7);
     HAL_UART_Receive_IT(&huart1,&usart1_rx,1); //开启串口中断接收
-
-    //Robot_set_move(3000,0,0);
 }
 void App_Run(void)
 {
-    static uint32_t last_update = 0;
-    char buffer[128];
-    
-    if(HAL_GetTick() - last_update > 100)
-    {
-        last_update = HAL_GetTick();
-
-        //处理视觉给来的数据包
-        /*
-        if(Maxi_posion_data.state==0)
-        {
-            sprintf(buffer,"%d %d",Maxi_posion_data.x,Maxi_posion_data.y);
-            ssd1306_Fill(Black);
-            ssd1306_SetCursor(0,0);
-            ssd1306_WriteString(buffer,Font_7x10,White);
-            ssd1306_UpdateScreen(&hi2c2);
-        }
-        if(openmv_data.state==0)
-        {
-            sprintf(buffer,"%d %d",openmv_data.line_error,openmv_data.turning_state);
-            ssd1306_Fill(Black);
-            ssd1306_SetCursor(0,0);
-            ssd1306_WriteString(buffer,Font_7x10,White);
-            ssd1306_UpdateScreen(&hi2c2);
-        }
-        */
-    }
-
+    Robot_remote_control();
 }
 //收到调试包
 void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
 {
-    // Led_on();
-    // Led_off();
     if(csx==&vofamanager_t)
     {
         if(strcmp(sign,"motor")==0)
         {
             a=(int)data;
-            //Emm_Speed_Mode(0x01,a,0,EMM_SYNC_DISABLE);
-            //Servo_Set(a);
             DMG6220_MoveAngle(&dmg6220_t, a, 0.0f);
         }
         if(strcmp(sign,"servo")==0)
         {
             a=(int)data;
-            //Emm_Speed_Mode(0x01,a,0,EMM_SYNC_DISABLE);
             Servo_Set(a);
         }
         if(strcmp(sign,"Get_yaw")==0)
         {
-            //Emm_Home(0x01,EMM_SYNC_DISABLE);
             float data;
             hwt101_read_yaw(&hwt101_t,&data);
             printf("%.2f\r\n",data);
@@ -111,6 +73,54 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
         if(strcmp(sign,"Reset_mcu")==0)
         {
             HAL_NVIC_SystemReset();
+        }
+        if(strcmp(sign,"forward")==0)
+        {
+            
+            if(((int)data)==1)
+            {
+                remote_sign=1;
+            }
+            else
+            {
+                remote_sign=255;
+            }
+        }
+        if(strcmp(sign,"backward")==0)
+        {
+            
+            if(((int)data)==1)
+            {
+                remote_sign=2;
+            }
+            else
+            {
+                remote_sign=255;
+            }
+        }
+        if(strcmp(sign,"left")==0)
+        {
+            
+            if(((int)data)==1)
+            {
+                remote_sign=3;
+            }
+            else
+            {
+                remote_sign=255;
+            }
+        }
+        if(strcmp(sign,"right")==0)
+        {
+            
+            if(((int)data)==1)
+            {
+                remote_sign=4;
+            }
+            else
+            {
+                remote_sign=255;
+            }
         }
     }
 }

@@ -12,9 +12,11 @@
 /* 最大轮速 */
 #define WHEEL_MAX_SPEED  3000
 
+#define ROBOT_REMOTE_CONTROL_SPEED 150
 /* 方向修正：1 保持，-1 取反，按实际调试修改 */
-static const int8_t dir_fix[4] = { 1, -1, 1, -1 };
+static const int8_t dir_fix[4] = { -1, 1, -1, 1 };
 
+Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
 /**
  * @brief 设置小车的运动状态（X型麦克纳姆轮）
  *
@@ -66,4 +68,45 @@ void Robot_set_move(int16_t vx, int16_t vy, int16_t omega)
     Emm_Speed_Mode(WHEEL_RR, raw[3], MOVE_ACCEL, EMM_SYNC_ENABLE);
     HAL_Delay(ROBOT_MOVE_SET_MOTOR_DELAY);
     Emm_Sync_Trig();
+}
+
+void Robot_stop_move(void)
+{
+    Emm_Speed_Mode(WHEEL_LF, 0, 0, EMM_SYNC_ENABLE);
+    HAL_Delay(ROBOT_MOVE_SET_MOTOR_DELAY);
+    Emm_Speed_Mode(WHEEL_RF, 0, 0, EMM_SYNC_ENABLE);
+    HAL_Delay(ROBOT_MOVE_SET_MOTOR_DELAY);
+    Emm_Speed_Mode(WHEEL_LR, 0, 0, EMM_SYNC_ENABLE);
+    HAL_Delay(ROBOT_MOVE_SET_MOTOR_DELAY);
+    Emm_Speed_Mode(WHEEL_RR, 0, 0, EMM_SYNC_ENABLE);
+    HAL_Delay(ROBOT_MOVE_SET_MOTOR_DELAY);
+    Emm_Sync_Trig();
+}
+void Robot_remote_control(void)
+{
+    if(remote_sign==ROBOT_REMOTE_FORWARD)
+    {
+        Robot_set_move(ROBOT_REMOTE_CONTROL_SPEED,0,0);
+        remote_sign=0;
+    }
+    if(remote_sign==ROBOT_REMOTE_BACKWARD)
+    {
+        Robot_set_move(-ROBOT_REMOTE_CONTROL_SPEED,0,0);
+        remote_sign=0;
+    }
+    if(remote_sign==ROBOT_REMOTE_LEFT)
+    {
+        Robot_set_move(0,-ROBOT_REMOTE_CONTROL_SPEED,0);
+        remote_sign=0;
+    }
+    if(remote_sign==ROBOT_REMOTE_RIGHT)
+    {
+        Robot_set_move(0,ROBOT_REMOTE_CONTROL_SPEED,0);
+        remote_sign=0;
+    }
+    else if(remote_sign==ROBOT_REMOTE_TO_STOP)
+    {
+        Robot_set_move(0,0,0);
+        remote_sign=0;
+    }
 }
