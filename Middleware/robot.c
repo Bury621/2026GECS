@@ -21,6 +21,12 @@ static int16_t robot_vx = 0;
 static int16_t robot_vy = 0;
 static int16_t robot_omega = 0;
 
+/* 角度环内部状态 */
+static float robot_angle_continuous = 0.0f;
+static float robot_angle_last_yaw = 0.0f;
+static float robot_angle_last_omega = 0.0f;
+static uint8_t robot_angle_has_yaw = 0;
+
 Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
 
 static void Robot_update_move(void)
@@ -100,6 +106,70 @@ void Robot_set_omega(int16_t omega)
 {
     robot_omega = omega;
     Robot_update_move();
+}
+
+void Robot_Angle_Update(hwt101_csx *hwt101, PIDController *pid, uint16_t target_angle)
+{
+    float angle_sensor_data;
+    if(hwt101_read_yaw(hwt101,&angle_sensor_data)!=0)
+    {
+        return;
+    }
+
+    if(robot_angle_has_yaw==0)
+    {
+        robot_angle_continuous=angle_sensor_data;
+        robot_angle_last_yaw=angle_sensor_data;
+        robot_angle_has_yaw=1;
+        pid->prevMeasurement=robot_angle_continuous;
+    }
+    else
+    {
+        float delta_angle=angle_sensor_data-robot_angle_last_yaw;
+        if(delta_angle>180.0f)
+        {
+            delta_angle-=360.0f;
+        }
+        else if(delta_angle<-180.0f)
+        {
+            delta_angle+=360.0f;
+        }
+        robot_angle_continuous+=delta_angle;
+        robot_angle_last_yaw=angle_sensor_data;
+    }
+
+    int16_t bounded_target=(int16_t)((int32_t)target_angle%360);
+    if(bounded_target>180)
+    {
+        bounded_target-=360;
+    }
+
+    float target_error=(float)bounded_target-robot_angle_continuous;
+    while(target_error>180.0f)
+    {
+        target_error-=360.0f;
+    }
+    while(target_error<-180.0f)
+    {
+        target_error+=360.0f;
+    }
+
+    float target_setpoint=robot_angle_continuous+target_error;
+    float angle_pid_output=PIDController_Update(pid,target_setpoint,robot_angle_continuous);
+
+    /* HWT101 的正向与本车 omega 的正向相反 */
+    float omega_output=-angle_pid_output;
+    float omega_delta=omega_output-robot_angle_last_omega;
+    if(omega_delta>10.0f)
+    {
+        omega_output=robot_angle_last_omega+10.0f;
+    }
+    else if(omega_delta<-10.0f)
+    {
+        omega_output=robot_angle_last_omega-10.0f;
+    }
+    robot_angle_last_omega=omega_output;
+    Robot_set_omega((int16_t)omega_output);
 }
 
 void Robot_stop_move(void)
