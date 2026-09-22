@@ -1,5 +1,5 @@
 #include "robot.h"
-
+#include <stdio.h>
 /* 轮子编号：1 左前，2 右前，3 左后，4 右后 */
 #define WHEEL_LF  1
 #define WHEEL_RF  2
@@ -14,7 +14,10 @@
 
 #define ROBOT_REMOTE_CONTROL_SPEED 150
 /* 方向修正：1 保持，-1 取反，按实际调试修改 */
-static const int8_t dir_fix[4] = { -1, 1, -1, 1 };
+static const int8_t dir_fix[4] = { 1, -1, 1, -1 };
+
+/* 角度环输出方向：轮子方向整体取反时同步改为 -1.0f */
+#define ROBOT_ANGLE_OUTPUT_SIGN  1.0f
 
 /* 缓存三个运动分量，单轴更新时保留其他分量 */
 static int16_t robot_vx = 0;
@@ -27,7 +30,21 @@ static float robot_angle_last_yaw = 0.0f;
 static float robot_angle_last_omega = 0.0f;
 static uint8_t robot_angle_has_yaw = 0;
 
+/* 计时器内部状态 */
+static uint32_t robot_time=0; //用来计时的变量
+
+/* 保存小车当前状态 */
+static Robot_stage robot_now_stage=ROBOT_STAGE_WAIT_FOR_START; //小车当前状态的状态机
+
 Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
+
+extern volatile uint16_t robot_angle; //App.c里面的，虽然耦合度很高很屎山但是不管了，懒得改了妈的
+extern hwt101_csx hwt101_t; //App.c里面的陀螺仪句柄
+
+//任务是否完成状态，0表示没走到，1表示走到了还没完成，2表示完成了
+uint8_t robot_task_1_state=0;
+uint8_t robot_task_2_state=0;
+uint8_t robot_task_3_state=0;
 
 static void Robot_update_move(void)
 {
@@ -158,7 +175,7 @@ void Robot_Angle_Update(hwt101_csx *hwt101, PIDController *pid, uint16_t target_
     float angle_pid_output=PIDController_Update(pid,target_setpoint,robot_angle_continuous);
 
     /* HWT101 的正向与本车 omega 的正向相反 */
-    float omega_output=-angle_pid_output;
+    float omega_output=ROBOT_ANGLE_OUTPUT_SIGN*angle_pid_output;
     float omega_delta=omega_output-robot_angle_last_omega;
     if(omega_delta>10.0f)
     {
@@ -203,4 +220,134 @@ void Robot_remote_control(void)
         Robot_set_move(0,0,0);
         remote_sign=0;
     }
+}
+
+/**
+ * @brief 获取车是否旋转到位
+ * 
+ * @param hwt101 陀螺仪句柄
+ * @param target_angle 目标角度（0~360°）
+ * @return uint8_t 已到位返回1，还在转返回0，错误返回2
+ */
+uint8_t Robot_is_turning(hwt101_csx *hwt101, float target_angle)
+{
+    float angle_sensor_data;
+    if (hwt101_read_yaw(hwt101, &angle_sensor_data) != 0)
+    {
+        return 2;
+    }
+
+    /* 直接求带符号差值，再归一到 (-180, 180] */
+    float diff = angle_sensor_data - target_angle;
+    if (diff > 180.0f)  diff -= 360.0f;
+    if (diff < -180.0f) diff += 360.0f;
+
+    /* 取绝对值得到最小夹角 */
+    float angle_diff = (diff < 0.0f) ? -diff : diff;
+
+    return (angle_diff < ROBOT_TURNING_JUJGUE_ANGLE_DEADBAND) ? 1 : 0;
+}
+/**
+ * @brief 机器人的时钟，在主循环里面10ms调用一次
+ * 
+ */
+void Robot_tick(void)
+{
+    if(robot_now_stage==ROBOT_STAGE_WAIT_FOR_START)
+    {
+        Robot_set_move(100,0,0);
+        
+        robot_time=0;
+        robot_now_stage=ROBOT_STAGE_START;
+    }
+    else if(robot_now_stage==ROBOT_STAGE_START && robot_time >= ROBOT_ROAD_TIME1)
+    {
+        Robot_set_move(0,0,0);
+        
+        robot_angle=90;
+
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_TURN1;
+    }
+    else if(Robot_is_turning(&hwt101_t,robot_angle) && robot_now_stage==ROBOT_STAGE_TURN1)
+    {
+        Robot_set_move(100,0,0);
+        
+        robot_time=0;
+        robot_now_stage=ROBOT_STAGE_STRAGE1;
+    }
+    else if(robot_now_stage==ROBOT_STAGE_STRAGE1 && robot_time >= ROBOT_ROAD_TIME2)
+    {
+        Robot_set_move(0,0,0);
+        robot_angle=0; //旋转
+
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_THROUGH_OBSTACLE; //切换到穿过障碍物状态
+    }
+    else if(Robot_is_turning(&hwt101_t,robot_angle) && robot_now_stage==ROBOT_STAGE_THROUGH_OBSTACLE)
+    {
+        Robot_set_move(100,0,0);
+        
+        robot_time=0;
+        robot_now_stage=ROBOT_STAGE_TURN2;
+    }
+    else if(robot_now_stage==ROBOT_STAGE_TURN2 && robot_time >= ROBOT_ROAD_TIME3)
+    {
+        Robot_set_move(0,0,0);
+        robot_angle=90; //旋转
+
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_STRAGE2; //切换到第二条直道
+    }
+    else if(Robot_is_turning(&hwt101_t,robot_angle) && robot_now_stage==ROBOT_STAGE_STRAGE2)
+    {
+        Robot_set_move(100,0,0);
+        
+        robot_time=0;
+        robot_now_stage=ROBOT_STAGE_TURN3;
+    }
+    else if(robot_now_stage==ROBOT_STAGE_TURN3 && robot_time >= ROBOT_ROAD_TIME4)
+    {
+        Robot_set_move(0,0,0);
+        robot_angle=0; //旋转
+
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_STRAGE3;
+    }
+    else if(Robot_is_turning(&hwt101_t,robot_angle) && robot_now_stage==ROBOT_STAGE_STRAGE3)
+    {
+        Robot_set_move(100,0,0);
+        
+        robot_time=0;
+        robot_now_stage=ROBOT_STAGE_TURN4;
+    }
+    else if(robot_now_stage==ROBOT_STAGE_TURN4 && robot_time >= ROBOT_ROAD_TIME5) //if里面写的是什么，这里干的就是什么事情
+    {
+        Robot_set_move(0,0,0);
+        robot_angle=270; //旋转
+
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_STRAGE4;
+    }
+    else if(Robot_is_turning(&hwt101_t,robot_angle) && robot_now_stage==ROBOT_STAGE_STRAGE4)
+    {
+        Robot_set_move(100,0,0);
+        
+        robot_time=0;
+        robot_now_stage=ROBOT_STAGE_STRAGE5;
+        
+    }
+    else if(robot_now_stage==ROBOT_STAGE_STRAGE5 && robot_time >= ROBOT_ROAD_TIME6) //if里面写的是什么，这里干的就是什么事情
+    {
+        Robot_set_move(0,0,0);
+
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_TASK1; //切换到做任务一模式
+        robot_task_1_state=1; //置标志位，走到任务一了
+    }
+    else if(robot_task_1_state==2)
+    {
+        
+    }
+    robot_time++;
 }

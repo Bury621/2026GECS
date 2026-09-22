@@ -16,7 +16,9 @@ int a;
 
 //标志位
 extern Robot_remote_sign remote_sign; //小车遥控标志位
-volatile uint8_t robot_angle_update_sign=0; //角度环更新标志位
+volatile uint8_t tim7_100ms_trigged_sign=0; //角度环更新标志位
+volatile uint8_t tim10_10ms_trigged_sign=0; //小车状态更新标志位
+volatile uint8_t debug_start_flag=1; //上位机发送start:1后才启动
 
 //一些变量
 volatile uint16_t robot_angle=0; //角度环的目标角度
@@ -24,18 +26,23 @@ volatile uint16_t robot_angle=0; //角度环的目标角度
 void App_Init(void)
 {
     printf("Booting\r\n");
-    HAL_Delay(1000); //等待整个系统稳定
+    for(int x=0;x<20;x++)//等待整个系统稳定
+    {
+        HAL_Delay(50);
+        Led_toggle();
+        
+    }
 
     //中间层初始化
     VOFA_Init(&vofamanager_t);
     Maxi_Init(&maxi_connect_t);
     Openmv_Init(&openmv_connect_t);
     PIDController_Init(&robot_angle_pid_t);
-    robot_angle_pid_t.Kp=6.81f;
+    robot_angle_pid_t.Kp=1.0f;
     robot_angle_pid_t.Ki=0.0f;
-    robot_angle_pid_t.Kd=3.91f;
+    robot_angle_pid_t.Kd=0.1f;
     robot_angle_pid_t.tau=0.05f;
-    robot_angle_pid_t.deadband=1.5f;
+    robot_angle_pid_t.deadband=0.5f;
     robot_angle_pid_t.limMin=-1000.0f;
     robot_angle_pid_t.limMax=1000.0f;
     robot_angle_pid_t.limMinInt=-20.0f;
@@ -61,20 +68,26 @@ void App_Init(void)
 
     //片上外设初始化
     HAL_TIM_Base_Start_IT(&htim7); //开启tim7
+    HAL_TIM_Base_Start_IT(&htim10); //开启tim7
     HAL_UART_Receive_IT(&huart1,&usart1_rx,1); //开启串口中断接收
 
+    
 }
 void App_Run(void)
 {
     Robot_remote_control(); //处理遥控
-    if(robot_angle_update_sign==1) //动态更新角度
+    if(tim7_100ms_trigged_sign==1) //动态更新角度
     {
-        robot_angle_update_sign=0;
+        tim7_100ms_trigged_sign=0;
         Robot_Angle_Update(&hwt101_t,&robot_angle_pid_t,robot_angle);
-
-        // float data;
-        // hwt101_read_yaw(&hwt101_zt,&data);
-        // printf("%.2f\r\n",data);
+    }
+    if(tim10_10ms_trigged_sign==1)
+    {
+        tim10_10ms_trigged_sign=0;
+        if(debug_start_flag==1)
+        {
+            Robot_tick();
+        }
     }
 }
 
@@ -102,6 +115,10 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
         if(strcmp(sign,"Reset_mcu")==0)
         {
             HAL_NVIC_SystemReset();
+        }
+        if(strcmp(sign,"start")==0)
+        {
+            debug_start_flag=1;
         }
         if(strcmp(sign,"forward")==0)
         {
@@ -212,6 +229,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if(htim->Instance==TIM7)
     {
-        robot_angle_update_sign=1; //置标志位，更新角度环
+        tim7_100ms_trigged_sign=1; //置标志位
+    }
+    if(htim->Instance==TIM10)
+    {
+        tim10_10ms_trigged_sign=1;
     }
 }

@@ -32,6 +32,7 @@ extern I2C_HandleTypeDef hi2c1;
 extern I2C_HandleTypeDef hi2c2;
 extern CAN_HandleTypeDef hcan1;
 extern TIM_HandleTypeDef htim7;
+extern TIM_HandleTypeDef htim10;
 
 //extern TIM_HandleTypeDef htim7;
 #endif
