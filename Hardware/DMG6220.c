@@ -3,11 +3,13 @@
 #include <string.h>
 
 #define DMG6220_DEG_TO_RAD 0.01745329252f
+#define DMG6220_RAD_TO_DEG 57.29577951f
+#define DMG6220_TWO_PI 6.283185307f
+#define DMG6220_PI 3.141592654f
 #define DMG6220_P_MAX 12.5f
 #define DMG6220_V_MAX 45.0f
 #define DMG6220_T_MAX 10.0f
-#define DMG6220_MOVE_KP 3.0f
-#define DMG6220_MOVE_KD 0.05f
+#define DMG6220_MIN_MOVE_SPEED_RAD_S 0.1f
 
 static float DMG6220_Clamp(float value, float minimum, float maximum)
 {
@@ -37,8 +39,49 @@ static uint16_t DMG6220_FloatToUint(float value, float minimum,
     return (uint16_t)((value - minimum) * (float)max_raw / span);
 }
 
+static float DMG6220_UintToFloat(uint16_t value, float minimum,
+                                 float maximum, uint8_t bits)
+{
+    float span = maximum - minimum;
+    uint32_t max_raw = (1UL << bits) - 1UL;
+
+    return minimum + (float)value * span / (float)max_raw;
+}
+
+static void DMG6220_WriteFloatLe(uint8_t *data, float value)
+{
+    union
+    {
+        float value;
+        uint32_t raw;
+    } convert;
+
+    convert.value = value;
+    data[0] = (uint8_t)convert.raw;
+    data[1] = (uint8_t)(convert.raw >> 8U);
+    data[2] = (uint8_t)(convert.raw >> 16U);
+    data[3] = (uint8_t)(convert.raw >> 24U);
+}
+
+static float DMG6220_WrapDelta(float delta)
+{
+    while (delta > DMG6220_PI)
+    {
+        delta -= DMG6220_TWO_PI;
+    }
+
+    while (delta < -DMG6220_PI)
+    {
+        delta += DMG6220_TWO_PI;
+    }
+
+    return delta;
+}
+
 static HAL_StatusTypeDef DMG6220_ConfigureCan(CAN_HandleTypeDef *hcan)
 {
+    CAN_FilterTypeDef filter = {0};
+
     if (hcan == NULL)
     {
         return HAL_ERROR;
@@ -64,6 +107,22 @@ static HAL_StatusTypeDef DMG6220_ConfigureCan(CAN_HandleTypeDef *hcan)
     hcan->Init.TransmitFifoPriority = DISABLE;
 
     if (HAL_CAN_Init(hcan) != HAL_OK)
+    {
+        return HAL_ERROR;
+    }
+
+    filter.FilterBank = 0U;
+    filter.FilterMode = CAN_FILTERMODE_IDMASK;
+    filter.FilterScale = CAN_FILTERSCALE_32BIT;
+    filter.FilterIdHigh = 0U;
+    filter.FilterIdLow = 0U;
+    filter.FilterMaskIdHigh = 0U;
+    filter.FilterMaskIdLow = 0U;
+    filter.FilterFIFOAssignment = CAN_RX_FIFO0;
+    filter.FilterActivation = ENABLE;
+    filter.SlaveStartFilterBank = 14U;
+
+    if (HAL_CAN_ConfigFilter(hcan, &filter) != HAL_OK)
     {
         return HAL_ERROR;
     }
@@ -125,15 +184,171 @@ HAL_StatusTypeDef DMG6220_Enable(DMG6220 *motor)
     return DMG6220_TransmitFrame(motor, motor->can_id, data);
 }
 
-HAL_StatusTypeDef DMG6220_MoveAngle(DMG6220 *motor, float angle_deg,
-                                    float torque_nm)
+HAL_StatusTypeDef DMG6220_Update(DMG6220 *motor)
 {
-    return DMG6220_SendMit(motor,
-                           angle_deg * DMG6220_DEG_TO_RAD,
-                           0.0f,
-                           DMG6220_MOVE_KP,
-                           DMG6220_MOVE_KD,
-                           torque_nm);
+    CAN_RxHeaderTypeDef rx_header;
+    uint8_t data[8];
+    HAL_StatusTypeDef status = HAL_TIMEOUT;
+
+    if ((motor == NULL) || (motor->hcan == NULL))
+    {
+        return HAL_ERROR;
+    }
+
+    while (HAL_CAN_GetRxMessage(motor->hcan, CAN_RX_FIFO0, &rx_header,
+                                data) == HAL_OK)
+    {
+        uint16_t position_raw;
+        uint16_t velocity_raw;
+        uint16_t torque_raw;
+
+        if ((rx_header.IDE != CAN_ID_STD) || (rx_header.RTR != CAN_RTR_DATA) ||
+            (rx_header.DLC != 8U) ||
+            ((data[0] & 0x0FU) != motor->can_id))
+        {
+            continue;
+        }
+
+        position_raw = ((uint16_t)data[1] << 8U) | data[2];
+        velocity_raw = ((uint16_t)data[3] << 4U) | (data[4] >> 4U);
+        torque_raw = ((uint16_t)(data[4] & 0x0FU) << 8U) | data[5];
+
+        motor->position_rad = DMG6220_UintToFloat(position_raw,
+                                                  -DMG6220_P_MAX,
+                                                  DMG6220_P_MAX, 16U);
+        motor->velocity_rad_s = DMG6220_UintToFloat(velocity_raw,
+                                                    -DMG6220_V_MAX,
+                                                    DMG6220_V_MAX, 12U);
+        motor->torque_nm = DMG6220_UintToFloat(torque_raw, -DMG6220_T_MAX,
+                                               DMG6220_T_MAX, 12U);
+        motor->error = data[0] >> 4U;
+        motor->position_valid = 1U;
+        status = HAL_OK;
+    }
+
+    return status;
+}
+
+HAL_StatusTypeDef DMG6220_GetPosition(DMG6220 *motor, float *angle_deg)
+{
+    HAL_StatusTypeDef status;
+
+    if ((motor == NULL) || (angle_deg == NULL))
+    {
+        return HAL_ERROR;
+    }
+
+    status = DMG6220_Update(motor);
+    if ((status == HAL_ERROR) || (motor->position_valid == 0U))
+    {
+        return HAL_ERROR;
+    }
+
+    *angle_deg = motor->position_rad * DMG6220_RAD_TO_DEG;
+    return HAL_OK;
+}
+
+HAL_StatusTypeDef DMG6220_WaitForPosition(DMG6220 *motor,
+                                         uint32_t timeout_ms)
+{
+    uint32_t start_tick;
+
+    if (motor == NULL)
+    {
+        return HAL_ERROR;
+    }
+
+    start_tick = HAL_GetTick();
+    do
+    {
+        if ((DMG6220_Update(motor) == HAL_OK) &&
+            (motor->position_valid != 0U))
+        {
+            return HAL_OK;
+        }
+    } while ((HAL_GetTick() - start_tick) < timeout_ms);
+
+    return HAL_TIMEOUT;
+}
+
+HAL_StatusTypeDef DMG6220_MoveAngle(DMG6220 *motor, float angle_deg,
+                                    float speed_dps)
+{
+    float current_deg;
+    float target_deg;
+    float velocity_rad_s;
+
+    if (motor == NULL)
+    {
+        return HAL_ERROR;
+    }
+
+    DMG6220_Update(motor);
+    if (motor->position_valid == 0U)
+    {
+        return HAL_ERROR;
+    }
+
+    if (speed_dps < 0.0f)
+    {
+        speed_dps = -speed_dps;
+    }
+
+    velocity_rad_s = speed_dps * DMG6220_DEG_TO_RAD;
+    if (velocity_rad_s < DMG6220_MIN_MOVE_SPEED_RAD_S)
+    {
+        velocity_rad_s = DMG6220_MIN_MOVE_SPEED_RAD_S;
+    }
+
+    current_deg = motor->position_rad * DMG6220_RAD_TO_DEG;
+    target_deg = current_deg +
+                 DMG6220_WrapDelta((angle_deg - current_deg) *
+                                   DMG6220_DEG_TO_RAD) *
+                     DMG6220_RAD_TO_DEG;
+
+    motor->target_rad = target_deg * DMG6220_DEG_TO_RAD;
+    motor->target_velocity_rad_s = velocity_rad_s;
+    motor->last_target_tick = HAL_GetTick();
+    motor->target_valid = 1U;
+
+    return DMG6220_SendPosition(motor, motor->target_rad,
+                                motor->target_velocity_rad_s);
+}
+
+HAL_StatusTypeDef DMG6220_SendPosition(DMG6220 *motor, float position_rad,
+                                      float velocity_rad_s)
+{
+    uint8_t data[8];
+
+    if ((motor == NULL) || (motor->can_id > 0x0FU))
+    {
+        return HAL_ERROR;
+    }
+
+    DMG6220_WriteFloatLe(&data[0], position_rad);
+    DMG6220_WriteFloatLe(&data[4], velocity_rad_s);
+
+    return DMG6220_TransmitFrame(motor, 0x100U + motor->can_id, data);
+}
+
+HAL_StatusTypeDef DMG6220_Service(DMG6220 *motor)
+{
+    uint32_t now;
+
+    if ((motor == NULL) || (motor->target_valid == 0U))
+    {
+        return HAL_OK;
+    }
+
+    now = HAL_GetTick();
+    if ((now - motor->last_target_tick) >= 10U)
+    {
+        motor->last_target_tick = now;
+        return DMG6220_SendPosition(motor, motor->target_rad,
+                                    motor->target_velocity_rad_s);
+    }
+
+    return HAL_OK;
 }
 
 HAL_StatusTypeDef DMG6220_SendMit(DMG6220 *motor, float position,

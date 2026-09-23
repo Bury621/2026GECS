@@ -18,7 +18,7 @@ int a;
 extern Robot_remote_sign remote_sign; //小车遥控标志位
 volatile uint8_t tim7_100ms_trigged_sign=0; //角度环更新标志位
 volatile uint8_t tim10_10ms_trigged_sign=0; //小车状态更新标志位
-volatile uint8_t debug_start_flag=1; //上位机发送start:1后才启动
+volatile uint8_t debug_start_flag=0; //上位机发送start:1后才启动
 
 //一些变量
 volatile uint16_t robot_angle=0; //角度环的目标角度
@@ -39,7 +39,7 @@ void App_Init(void)
     Openmv_Init(&openmv_connect_t);
     PIDController_Init(&robot_angle_pid_t);
     robot_angle_pid_t.Kp=1.0f;
-    robot_angle_pid_t.Ki=0.0f;
+    robot_angle_pid_t.Ki=0.5f;
     robot_angle_pid_t.Kd=0.1f;
     robot_angle_pid_t.tau=0.05f;
     robot_angle_pid_t.deadband=0.5f;
@@ -63,6 +63,8 @@ void App_Init(void)
 
     DMG6220_Init(&dmg6220_t, &hcan1, 0x01);
     DMG6220_Enable(&dmg6220_t);
+    HAL_Delay(100);
+    DMG6220_MoveAngle(&dmg6220_t, 10, 270.0f);
 
     Robot_set_move(0,0,0); //停车
 
@@ -70,11 +72,11 @@ void App_Init(void)
     HAL_TIM_Base_Start_IT(&htim7); //开启tim7
     HAL_TIM_Base_Start_IT(&htim10); //开启tim7
     HAL_UART_Receive_IT(&huart1,&usart1_rx,1); //开启串口中断接收
-
-    
 }
 void App_Run(void)
 {
+    DMG6220_Update(&dmg6220_t);
+    DMG6220_Service(&dmg6220_t);
     Robot_remote_control(); //处理遥控
     if(tim7_100ms_trigged_sign==1) //动态更新角度
     {
@@ -98,8 +100,7 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
     {
         if(strcmp(sign,"motor")==0)
         {
-            a=(int)data;
-            DMG6220_MoveAngle(&dmg6220_t, a, 0.0f);
+            DMG6220_MoveAngle(&dmg6220_t, (int)data, 270.0f);
         }
         if(strcmp(sign,"servo")==0)
         {
