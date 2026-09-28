@@ -13,7 +13,8 @@
 /* 最大轮速 */
 #define WHEEL_MAX_SPEED  3000
 
-#define ROBOT_REMOTE_CONTROL_SPEED 150
+#define ROBOT_REMOTE_CONTROL_SPEED 80
+#define ROBOT_QUICK_TURN_REDIUS 105.0f
 /* 方向修正：1 保持，-1 取反，按实际调试修改 */
 static const int8_t dir_fix[4] = { 1, -1, 1, -1 };
 
@@ -453,7 +454,7 @@ void Robot_tick(void)
     {
         Robot_set_move(100,0,0);
         
-        robot_time=0;
+        robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_START;
     }
     else if(robot_now_stage==ROBOT_STAGE_START && robot_time >= ROBOT_ROAD_TIME1)
@@ -469,28 +470,29 @@ void Robot_tick(void)
     {
         Robot_set_move(100,0,0);
         
-        robot_time=0;
+        robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE1;
     }
     else if(robot_now_stage==ROBOT_STAGE_STRAGE1 && robot_time >= ROBOT_ROAD_TIME2)
     {
-        Robot_set_move(0,0,0);
-        robot_angle=0; //旋转
+        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, -90.0f,25);
+        //robot_angle=0; //旋转
 
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_THROUGH_OBSTACLE; //切换到穿过障碍物状态
     }
-    else if(Robot_is_turning(&hwt101_t,robot_angle) && robot_now_stage==ROBOT_STAGE_THROUGH_OBSTACLE)
+    else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_THROUGH_OBSTACLE)
     {
-        Robot_set_move(100,0,0);
+        Robot_set_move(50,0,0);
         
-        robot_time=0;
+        robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TURN2;
     }
     else if(robot_now_stage==ROBOT_STAGE_TURN2 && robot_time >= ROBOT_ROAD_TIME3)
     {
-        Robot_set_move(0,0,0);
-        robot_angle=90; //旋转
+        //Robot_set_move(0,0,0);
+        //robot_angle=90; //旋转
+        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 90.0f,25);
 
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE2; //切换到第二条直道
@@ -499,14 +501,14 @@ void Robot_tick(void)
     {
         Robot_set_move(100,0,0);
         
-        robot_time=0;
+        robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TURN3;
     }
     else if(robot_now_stage==ROBOT_STAGE_TURN3 && robot_time >= ROBOT_ROAD_TIME4)
     {
-        Robot_set_move(0,0,0);
-        robot_angle=0; //旋转
-
+        // Robot_set_move(0,0,0);
+        // robot_angle=0; //旋转
+        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, -90.0f,25);
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE3;
     }
@@ -514,13 +516,15 @@ void Robot_tick(void)
     {
         Robot_set_move(100,0,0);
         
-        robot_time=0;
+        robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TURN4;
     }
     else if(robot_now_stage==ROBOT_STAGE_TURN4 && robot_time >= ROBOT_ROAD_TIME5) //if里面写的是什么，这里干的就是什么事情
     {
-        Robot_set_move(0,0,0);
-        robot_angle=270; //旋转
+        //Robot_set_move(0,0,0);
+        //robot_angle=270; //旋转
+
+        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, -90.0f,25);
 
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE4;
@@ -529,7 +533,7 @@ void Robot_tick(void)
     {
         Robot_set_move(100,0,0);
         
-        robot_time=0;
+        robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE5;
         
     }

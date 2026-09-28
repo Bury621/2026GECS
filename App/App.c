@@ -22,7 +22,7 @@ static volatile uint8_t robot_diff_turn_stop_request = 0;
 extern Robot_remote_sign remote_sign; //小车遥控标志位
 volatile uint8_t tim7_100ms_trigged_sign=0; //角度环更新标志位
 volatile uint8_t tim10_10ms_trigged_sign=0; //小车状态更新标志位
-volatile uint8_t debug_start_flag=1; //上位机发送start:1后才启动
+volatile uint8_t debug_start_flag=0; //上位机发送start:1后才启动
 
 //一些变量
 volatile uint16_t robot_angle=0; //角度环的目标角度
