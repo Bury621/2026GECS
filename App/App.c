@@ -13,19 +13,23 @@ volatile Maxi_posion_package Maxi_posion_data={.state=1}; //从maxicam得到的�
 volatile Openmv_package openmv_data={.state=1}; //从openmv得到的巡线数据
 uint8_t usart1_rx;
 int a;
+static volatile float robot_diff_turn_radius_cm = 50.0f;
+static volatile float robot_diff_turn_target_angle_deg = 0.0f;
+static volatile uint8_t robot_diff_turn_start_request = 0;
+static volatile uint8_t robot_diff_turn_stop_request = 0;
 
 //标志位
 extern Robot_remote_sign remote_sign; //小车遥控标志位
 volatile uint8_t tim7_100ms_trigged_sign=0; //角度环更新标志位
 volatile uint8_t tim10_10ms_trigged_sign=0; //小车状态更新标志位
-volatile uint8_t debug_start_flag=0; //上位机发送start:1后才启动
+volatile uint8_t debug_start_flag=1; //上位机发送start:1后才启动
 
 //一些变量
 volatile uint16_t robot_angle=0; //角度环的目标角度
 
 void App_Init(void)
 {
-    printf("Booting\r\n");
+    printf("Booting...\n");
     for(int x=0;x<20;x++)//等待整个系统稳定
     {
         HAL_Delay(50);
@@ -39,15 +43,15 @@ void App_Init(void)
     Openmv_Init(&openmv_connect_t);
     PIDController_Init(&robot_angle_pid_t);
     robot_angle_pid_t.Kp=1.0f;
-    robot_angle_pid_t.Ki=0.5f;
-    robot_angle_pid_t.Kd=0.1f;
+    robot_angle_pid_t.Ki=0.019f;
+    robot_angle_pid_t.Kd=0.101f;
     robot_angle_pid_t.tau=0.05f;
-    robot_angle_pid_t.deadband=0.5f;
+    robot_angle_pid_t.deadband=0.3f;
     robot_angle_pid_t.limMin=-1000.0f;
     robot_angle_pid_t.limMax=1000.0f;
     robot_angle_pid_t.limMinInt=-20.0f;
     robot_angle_pid_t.limMaxInt=20.0f;
-    robot_angle_pid_t.T=0.01f;
+    robot_angle_pid_t.T=0.1f;
 
     //硬件初始化
     ssd1306_Init(&hi2c2);
@@ -72,16 +76,37 @@ void App_Init(void)
     HAL_TIM_Base_Start_IT(&htim7); //开启tim7
     HAL_TIM_Base_Start_IT(&htim10); //开启tim7
     HAL_UART_Receive_IT(&huart1,&usart1_rx,1); //开启串口中断接收
+
+    printf("Ready\n");
 }
 void App_Run(void)
 {
     DMG6220_Update(&dmg6220_t);
     DMG6220_Service(&dmg6220_t);
+
+    if (robot_diff_turn_stop_request)
+    {
+        robot_diff_turn_stop_request = 0;
+        Robot_stop_differential_turn();
+    }
+    if (robot_diff_turn_start_request)
+    {
+        robot_diff_turn_start_request = 0;
+        Robot_start_differential_turn(robot_diff_turn_radius_cm,
+                                      robot_diff_turn_target_angle_deg);
+    }
+
     Robot_remote_control(); //处理遥控
     if(tim7_100ms_trigged_sign==1) //动态更新角度
     {
         tim7_100ms_trigged_sign=0;
         Robot_Angle_Update(&hwt101_t,&robot_angle_pid_t,robot_angle);
+
+        float sensor_data;
+        hwt101_read_yaw(&hwt101_t,&sensor_data);
+
+        printf("%.2f,%d\n",sensor_data,robot_angle);
+        
     }
     if(tim10_10ms_trigged_sign==1)
     {
@@ -168,6 +193,7 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
         if(strcmp(sign,"Stop")==0)
         {
             remote_sign=255;
+            robot_diff_turn_stop_request=1;
         }
         if(strcmp(sign,"Kp")==0)
         {
@@ -189,6 +215,15 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
         if(strcmp(sign,"turn")==0)
         {
             robot_angle=(robot_angle+90) % 360;
+        }
+        if(strcmp(sign,"diff_radius")==0)
+        {
+            robot_diff_turn_radius_cm=data;
+        }
+        if(strcmp(sign,"diff_turn")==0)
+        {
+            robot_diff_turn_target_angle_deg=data;
+            robot_diff_turn_start_request=1;
         }
     }
 }

@@ -9,11 +9,21 @@
 
 #define ROBOT_MOVE_SET_MOTOR_DELAY 5
 
-#define ROBOT_TURNING_JUJGUE_ANGLE_DEADBAND 3 //角度误差多少以内认为旋转完成
+#define ROBOT_TURNING_JUJGUE_ANGLE_DEADBAND 1 //角度误差多少以内认为旋转完成
+
+/* 差速转弯默认参数，实际线速度可通过 _ex 接口单独指定。
+   omega = linear_speed * ROBOT_DIFF_TURN_OMEGA_GAIN / radius_cm，
+   若实车转弯半径不准，优先标定该增益。 */
+#define ROBOT_DIFF_TURN_DEFAULT_LINEAR_SPEED 150.0f
+#define ROBOT_DIFF_TURN_MAX_OMEGA 500.0f
+#define ROBOT_DIFF_TURN_OMEGA_GAIN 100.0f
+#define ROBOT_DIFF_TURN_MIN_RADIUS_CM 0.1f
+#define ROBOT_DIFF_TURN_ANGLE_DEADBAND 1.0f
+#define ROBOT_DIFF_TURN_TIMEOUT_MS 30000U
 
 #define ROBOT_ROAD_TIME1 135
 #define ROBOT_ROAD_TIME2 140
-#define ROBOT_ROAD_TIME3 190
+#define ROBOT_ROAD_TIME3 205
 #define ROBOT_ROAD_TIME4 175
 #define ROBOT_ROAD_TIME5 193
 #define ROBOT_ROAD_TIME6 140
@@ -44,6 +54,12 @@ typedef enum{
     ROBOT_STAGE_TASK1
 }Robot_stage;
 
+typedef enum{
+    ROBOT_DIFFERENTIAL_TURN_IDLE=0,
+    ROBOT_DIFFERENTIAL_TURN_RUNNING,
+    ROBOT_DIFFERENTIAL_TURN_DONE
+}Robot_differential_turn_state;
+
 void Robot_set_move(int16_t vx,int16_t vy,int16_t omega);
 void Robot_set_vx(int16_t vx);
 void Robot_set_vy(int16_t vy);
@@ -53,4 +69,23 @@ void Robot_stop_move(void);
 void Robot_remote_control(void);
 void Robot_tick(void);
 uint8_t Robot_is_turning(hwt101_csx *hwt101, float target_angle);
+
+/**
+ * @brief 开始一次差速转弯
+ * @param radius_cm 转弯半径，单位 cm，0 表示原地差速旋转
+ * @param target_angle_deg 相对当前航向的目标转角，正数左转，负数右转
+ * @return 0 成功，1 陀螺仪数据无效，2 参数无效
+ */
+uint8_t Robot_start_differential_turn(float radius_cm, float target_angle_deg);
+
+/**
+ * @brief 开始一次差速转弯，并指定前进方向线速度命令
+ * @param linear_speed 非负的前进速度命令，内部会自动限幅
+ */
+uint8_t Robot_start_differential_turn_ex(float radius_cm,
+                                          float target_angle_deg,
+                                          float linear_speed);
+
+void Robot_stop_differential_turn(void);
+uint8_t Robot_is_differential_turning(void);
 #endif

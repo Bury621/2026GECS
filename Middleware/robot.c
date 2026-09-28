@@ -1,4 +1,5 @@
 #include "robot.h"
+#include <math.h>
 #include <stdio.h>
 /* 轮子编号：1 左前，2 右前，3 左后，4 右后 */
 #define WHEEL_LF  1
@@ -29,6 +30,16 @@ static float robot_angle_continuous = 0.0f;
 static float robot_angle_last_yaw = 0.0f;
 static float robot_angle_last_omega = 0.0f;
 static uint8_t robot_angle_has_yaw = 0;
+
+/* 差速转弯内部状态 */
+static volatile Robot_differential_turn_state robot_diff_turn_state =
+    ROBOT_DIFFERENTIAL_TURN_IDLE;
+static float robot_diff_turn_start_angle = 0.0f;
+static float robot_diff_turn_target_angle = 0.0f;
+static float robot_diff_turn_linear_speed = 0.0f;
+static float robot_diff_turn_omega = 0.0f;
+static int8_t robot_diff_turn_direction = 1;
+static uint32_t robot_diff_turn_start_tick = 0;
 
 /* 计时器内部状态 */
 static uint32_t robot_time=0; //用来计时的变量
@@ -125,11 +136,178 @@ void Robot_set_omega(int16_t omega)
     Robot_update_move();
 }
 
+static uint16_t Robot_normalize_angle(float angle)
+{
+    int32_t normalized = (int32_t)angle % 360;
+    if (normalized < 0)
+    {
+        normalized += 360;
+    }
+    return (uint16_t)normalized;
+}
+
+static void Robot_update_differential_turn(PIDController *pid)
+{
+    if (robot_diff_turn_state != ROBOT_DIFFERENTIAL_TURN_RUNNING)
+    {
+        return;
+    }
+
+    if ((HAL_GetTick() - robot_diff_turn_start_tick) >= ROBOT_DIFF_TURN_TIMEOUT_MS)
+    {
+        robot_diff_turn_state = ROBOT_DIFFERENTIAL_TURN_DONE;
+        Robot_set_move(0, 0, 0);
+        robot_angle = Robot_normalize_angle(robot_angle_continuous);
+        robot_angle_last_omega = 0.0f;
+        PIDController_Init(pid);
+        pid->prevMeasurement = robot_angle_continuous;
+        return;
+    }
+
+    float turned_angle = robot_angle_continuous - robot_diff_turn_start_angle;
+    float remaining_angle = robot_diff_turn_target_angle - turned_angle;
+    uint8_t reached = 0;
+
+    if (robot_diff_turn_direction > 0)
+    {
+        reached = remaining_angle <= ROBOT_DIFF_TURN_ANGLE_DEADBAND;
+    }
+    else
+    {
+        reached = remaining_angle >= -ROBOT_DIFF_TURN_ANGLE_DEADBAND;
+    }
+
+    if (reached)
+    {
+        robot_diff_turn_state = ROBOT_DIFFERENTIAL_TURN_DONE;
+        //Robot_set_move(0, 0, 0); 差速转弯之后不要马上停车
+        Robot_set_move((int16_t)robot_diff_turn_linear_speed, 0, 0);
+        robot_angle = Robot_normalize_angle(robot_angle_continuous);
+        robot_angle_last_omega = 0.0f;
+
+        /* 差速转弯结束后清掉角度环历史，避免恢复正常角度环时回抽。 */
+        PIDController_Init(pid);
+        pid->prevMeasurement = robot_angle_continuous;
+        return;
+    }
+
+    Robot_set_move((int16_t)robot_diff_turn_linear_speed,
+                   0,
+                   (int16_t)(robot_diff_turn_direction * robot_diff_turn_omega));
+}
+
+uint8_t Robot_start_differential_turn_ex(float radius_cm,
+                                          float target_angle_deg,
+                                          float linear_speed)
+{
+    if (!isfinite(radius_cm) || !isfinite(target_angle_deg) ||
+        !isfinite(linear_speed) || radius_cm < 0.0f || linear_speed <= 0.0f)
+    {
+        return 2;
+    }
+
+    if (fabsf(target_angle_deg) <= ROBOT_DIFF_TURN_ANGLE_DEADBAND)
+    {
+        Robot_stop_differential_turn();
+        return 0;
+    }
+
+    float yaw;
+    if (hwt101_read_yaw(&hwt101_t, &yaw) != 0)
+    {
+        return 1;
+    }
+
+    if (robot_angle_has_yaw == 0)
+    {
+        robot_angle_continuous = yaw;
+        robot_angle_last_yaw = yaw;
+        robot_angle_has_yaw = 1;
+    }
+    else
+    {
+        float delta_angle = yaw - robot_angle_last_yaw;
+        if (delta_angle > 180.0f)
+        {
+            delta_angle -= 360.0f;
+        }
+        else if (delta_angle < -180.0f)
+        {
+            delta_angle += 360.0f;
+        }
+        robot_angle_continuous += delta_angle;
+        robot_angle_last_yaw = yaw;
+    }
+
+    float abs_radius = fabsf(radius_cm);
+    float abs_omega;
+
+    robot_diff_turn_start_angle = robot_angle_continuous;
+    robot_diff_turn_target_angle = target_angle_deg;
+    robot_diff_turn_direction = (target_angle_deg > 0.0f) ? 1 : -1;
+    robot_diff_turn_linear_speed = linear_speed;
+
+    if (robot_diff_turn_linear_speed > WHEEL_MAX_SPEED)
+    {
+        robot_diff_turn_linear_speed = WHEEL_MAX_SPEED;
+    }
+
+    if (abs_radius < ROBOT_DIFF_TURN_MIN_RADIUS_CM)
+    {
+        robot_diff_turn_linear_speed = 0.0f;
+        robot_diff_turn_omega = ROBOT_DIFF_TURN_MAX_OMEGA;
+    }
+    else
+    {
+        abs_omega = robot_diff_turn_linear_speed * ROBOT_DIFF_TURN_OMEGA_GAIN / abs_radius;
+        if (abs_omega > ROBOT_DIFF_TURN_MAX_OMEGA)
+        {
+            abs_omega = ROBOT_DIFF_TURN_MAX_OMEGA;
+            robot_diff_turn_linear_speed =
+                abs_omega * abs_radius / ROBOT_DIFF_TURN_OMEGA_GAIN;
+        }
+        robot_diff_turn_omega = abs_omega;
+    }
+
+    robot_diff_turn_start_tick = HAL_GetTick();
+    robot_angle_last_omega = 0.0f;
+    robot_diff_turn_state = ROBOT_DIFFERENTIAL_TURN_RUNNING;
+    Robot_set_move((int16_t)robot_diff_turn_linear_speed,
+                   0,
+                   (int16_t)(robot_diff_turn_direction * robot_diff_turn_omega));
+    return 0;
+}
+
+uint8_t Robot_start_differential_turn(float radius_cm, float target_angle_deg)
+{
+    return Robot_start_differential_turn_ex(radius_cm,
+                                             target_angle_deg,
+                                             ROBOT_DIFF_TURN_DEFAULT_LINEAR_SPEED);
+}
+
+void Robot_stop_differential_turn(void)
+{
+    robot_diff_turn_state = ROBOT_DIFFERENTIAL_TURN_IDLE;
+    robot_angle = Robot_normalize_angle(robot_angle_continuous);
+    robot_angle_last_omega = 0.0f;
+    Robot_set_move(0, 0, 0);
+}
+
+uint8_t Robot_is_differential_turning(void)
+{
+    return (robot_diff_turn_state == ROBOT_DIFFERENTIAL_TURN_RUNNING) ? 1 : 0;
+}
+
 void Robot_Angle_Update(hwt101_csx *hwt101, PIDController *pid, uint16_t target_angle)
 {
     float angle_sensor_data;
     if(hwt101_read_yaw(hwt101,&angle_sensor_data)!=0)
     {
+        if (robot_diff_turn_state == ROBOT_DIFFERENTIAL_TURN_RUNNING &&
+            (HAL_GetTick() - robot_diff_turn_start_tick) >= ROBOT_DIFF_TURN_TIMEOUT_MS)
+        {
+            Robot_stop_differential_turn();
+        }
         return;
     }
 
@@ -153,6 +331,12 @@ void Robot_Angle_Update(hwt101_csx *hwt101, PIDController *pid, uint16_t target_
         }
         robot_angle_continuous+=delta_angle;
         robot_angle_last_yaw=angle_sensor_data;
+    }
+
+    if (Robot_is_differential_turning())
+    {
+        Robot_update_differential_turn(pid);
+        return;
     }
 
     int16_t bounded_target=(int16_t)((int32_t)target_angle%360);
@@ -191,6 +375,12 @@ void Robot_Angle_Update(hwt101_csx *hwt101, PIDController *pid, uint16_t target_
 
 void Robot_stop_move(void)
 {
+    if (robot_diff_turn_state == ROBOT_DIFFERENTIAL_TURN_RUNNING)
+    {
+        robot_angle = Robot_normalize_angle(robot_angle_continuous);
+        robot_angle_last_omega = 0.0f;
+    }
+    robot_diff_turn_state = ROBOT_DIFFERENTIAL_TURN_IDLE;
     Robot_set_move(0,0,0);
 }
 void Robot_remote_control(void)
@@ -253,6 +443,12 @@ uint8_t Robot_is_turning(hwt101_csx *hwt101, float target_angle)
  */
 void Robot_tick(void)
 {
+    if (Robot_is_differential_turning())
+    {
+        robot_time = 0;
+        return;
+    }
+
     if(robot_now_stage==ROBOT_STAGE_WAIT_FOR_START)
     {
         Robot_set_move(100,0,0);
