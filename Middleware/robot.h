@@ -21,11 +21,11 @@
 #define ROBOT_DIFF_TURN_ANGLE_DEADBAND 1.0f
 #define ROBOT_DIFF_TURN_TIMEOUT_MS 30000U
 
-#define ROBOT_ROAD_TIME1 130
-#define ROBOT_ROAD_TIME2 104
-#define ROBOT_ROAD_TIME3 263
+#define ROBOT_ROAD_TIME1 150
+#define ROBOT_ROAD_TIME2 114
+#define ROBOT_ROAD_TIME3 255
 #define ROBOT_ROAD_TIME4 95
-#define ROBOT_ROAD_TIME5 117
+#define ROBOT_ROAD_TIME5 122
 #define ROBOT_ROAD_TIME6 80
 
 typedef enum{
@@ -73,7 +73,7 @@ uint8_t Robot_is_turning(hwt101_csx *hwt101, float target_angle);
 /**
  * @brief 开始一次差速转弯
  * @param radius_cm 转弯半径，单位 cm，0 表示原地差速旋转
- * @param target_angle_deg 相对当前航向的目标转角，正数左转，负数右转
+ * @param target_angle_deg 目标绝对航向角，函数自动选择最短转向方向
  * @return 0 成功，1 陀螺仪数据无效，2 参数无效
  */
 uint8_t Robot_start_differential_turn(float radius_cm, float target_angle_deg);

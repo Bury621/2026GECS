@@ -14,7 +14,7 @@
 #define WHEEL_MAX_SPEED  3000
 
 #define ROBOT_REMOTE_CONTROL_SPEED 80
-#define ROBOT_QUICK_TURN_REDIUS 105.0f
+#define ROBOT_QUICK_TURN_REDIUS 120.0f
 /* 方向修正：1 保持，-1 取反，按实际调试修改 */
 static const int8_t dir_fix[4] = { 1, -1, 1, -1 };
 
@@ -37,13 +37,16 @@ static volatile Robot_differential_turn_state robot_diff_turn_state =
     ROBOT_DIFFERENTIAL_TURN_IDLE;
 static float robot_diff_turn_start_angle = 0.0f;
 static float robot_diff_turn_target_angle = 0.0f;
+static float robot_diff_turn_absolute_target = 0.0f;
 static float robot_diff_turn_linear_speed = 0.0f;
+static int16_t robot_diff_turn_resume_vx = 0;
 static float robot_diff_turn_omega = 0.0f;
 static int8_t robot_diff_turn_direction = 1;
 static uint32_t robot_diff_turn_start_tick = 0;
 
 /* 计时器内部状态 */
 static uint32_t robot_time=0; //用来计时的变量
+static uint32_t robot_last_tick=0;
 
 /* 保存小车当前状态 */
 static Robot_stage robot_now_stage=ROBOT_STAGE_WAIT_FOR_START; //小车当前状态的状态机
@@ -147,6 +150,15 @@ static uint16_t Robot_normalize_angle(float angle)
     return (uint16_t)normalized;
 }
 
+static void Robot_reset_angle_pid_state(PIDController *pid)
+{
+    pid->integrator = 0.0f;
+    pid->prevError = 0.0f;
+    pid->differentiator = 0.0f;
+    pid->out = 0.0f;
+    pid->prevMeasurement = robot_angle_continuous;
+}
+
 static void Robot_update_differential_turn(PIDController *pid)
 {
     if (robot_diff_turn_state != ROBOT_DIFFERENTIAL_TURN_RUNNING)
@@ -160,8 +172,7 @@ static void Robot_update_differential_turn(PIDController *pid)
         Robot_set_move(0, 0, 0);
         robot_angle = Robot_normalize_angle(robot_angle_continuous);
         robot_angle_last_omega = 0.0f;
-        PIDController_Init(pid);
-        pid->prevMeasurement = robot_angle_continuous;
+        Robot_reset_angle_pid_state(pid);
         return;
     }
 
@@ -182,13 +193,12 @@ static void Robot_update_differential_turn(PIDController *pid)
     {
         robot_diff_turn_state = ROBOT_DIFFERENTIAL_TURN_DONE;
         //Robot_set_move(0, 0, 0); 差速转弯之后不要马上停车
-        Robot_set_move((int16_t)robot_diff_turn_linear_speed, 0, 0);
-        robot_angle = Robot_normalize_angle(robot_angle_continuous);
+        Robot_set_move(robot_diff_turn_resume_vx, 0, 0);
+        robot_angle = Robot_normalize_angle(robot_diff_turn_absolute_target);
         robot_angle_last_omega = 0.0f;
 
         /* 差速转弯结束后清掉角度环历史，避免恢复正常角度环时回抽。 */
-        PIDController_Init(pid);
-        pid->prevMeasurement = robot_angle_continuous;
+        Robot_reset_angle_pid_state(pid);
         return;
     }
 
@@ -205,12 +215,6 @@ uint8_t Robot_start_differential_turn_ex(float radius_cm,
         !isfinite(linear_speed) || radius_cm < 0.0f || linear_speed <= 0.0f)
     {
         return 2;
-    }
-
-    if (fabsf(target_angle_deg) <= ROBOT_DIFF_TURN_ANGLE_DEADBAND)
-    {
-        Robot_stop_differential_turn();
-        return 0;
     }
 
     float yaw;
@@ -242,10 +246,30 @@ uint8_t Robot_start_differential_turn_ex(float radius_cm,
 
     float abs_radius = fabsf(radius_cm);
     float abs_omega;
+    float bounded_target = (float)Robot_normalize_angle(target_angle_deg);
+    float target_error = bounded_target - robot_angle_continuous;
+
+    while (target_error > 180.0f)
+    {
+        target_error -= 360.0f;
+    }
+    while (target_error < -180.0f)
+    {
+        target_error += 360.0f;
+    }
+
+    if (fabsf(target_error) <= ROBOT_DIFF_TURN_ANGLE_DEADBAND)
+    {
+        robot_diff_turn_state = ROBOT_DIFFERENTIAL_TURN_IDLE;
+        robot_angle = Robot_normalize_angle(bounded_target);
+        return 0;
+    }
 
     robot_diff_turn_start_angle = robot_angle_continuous;
-    robot_diff_turn_target_angle = target_angle_deg;
-    robot_diff_turn_direction = (target_angle_deg > 0.0f) ? 1 : -1;
+    robot_diff_turn_target_angle = target_error;
+    robot_diff_turn_absolute_target = bounded_target;
+    robot_diff_turn_direction = (target_error > 0.0f) ? 1 : -1;
+    robot_diff_turn_resume_vx = robot_vx;
     robot_diff_turn_linear_speed = linear_speed;
 
     if (robot_diff_turn_linear_speed > WHEEL_MAX_SPEED)
@@ -444,11 +468,22 @@ uint8_t Robot_is_turning(hwt101_csx *hwt101, float target_angle)
  */
 void Robot_tick(void)
 {
+    uint32_t now = HAL_GetTick();
+    uint32_t elapsed = 0;
+
+    if (robot_last_tick != 0)
+    {
+        elapsed = (now - robot_last_tick) / 10U;
+    }
+    robot_last_tick = now;
+
     if (Robot_is_differential_turning())
     {
         robot_time = 0;
         return;
     }
+
+    robot_time += elapsed;
 
     if(robot_now_stage==ROBOT_STAGE_WAIT_FOR_START)
     {
@@ -475,7 +510,7 @@ void Robot_tick(void)
     }
     else if(robot_now_stage==ROBOT_STAGE_STRAGE1 && robot_time >= ROBOT_ROAD_TIME2)
     {
-        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, -90.0f,25);
+        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 0.0f,25);
         //robot_angle=0; //旋转
 
         robot_time=0; //清零
@@ -497,7 +532,7 @@ void Robot_tick(void)
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE2; //切换到第二条直道
     }
-    else if(Robot_is_turning(&hwt101_t,robot_angle) && robot_now_stage==ROBOT_STAGE_STRAGE2)
+    else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_STRAGE2)
     {
         Robot_set_move(100,0,0);
         
@@ -508,11 +543,11 @@ void Robot_tick(void)
     {
         // Robot_set_move(0,0,0);
         // robot_angle=0; //旋转
-        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, -90.0f,25);
+        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 0.0f,25);
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE3;
     }
-    else if(Robot_is_turning(&hwt101_t,robot_angle) && robot_now_stage==ROBOT_STAGE_STRAGE3)
+    else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_STRAGE3)
     {
         Robot_set_move(100,0,0);
         
@@ -524,12 +559,12 @@ void Robot_tick(void)
         //Robot_set_move(0,0,0);
         //robot_angle=270; //旋转
 
-        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, -90.0f,25);
+        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 270.0f,25);
 
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE4;
     }
-    else if(Robot_is_turning(&hwt101_t,robot_angle) && robot_now_stage==ROBOT_STAGE_STRAGE4)
+    else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_STRAGE4)
     {
         Robot_set_move(100,0,0);
         
@@ -549,5 +584,4 @@ void Robot_tick(void)
     {
         
     }
-    robot_time++;
 }
