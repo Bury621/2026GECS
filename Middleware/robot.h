@@ -21,12 +21,16 @@
 #define ROBOT_DIFF_TURN_ANGLE_DEADBAND 1.0f
 #define ROBOT_DIFF_TURN_TIMEOUT_MS 30000U
 
-#define ROBOT_ROAD_TIME1 150
-#define ROBOT_ROAD_TIME2 114
-#define ROBOT_ROAD_TIME3 255
+#define ROBOT_QR_BACK_TIME 200 //扫二维码后退时间，单位10ms
+#define ROBOT_QR_WAIT_TIME 200 //扫二维码等待时间，单位10ms
+#define ROBOT_QR_FORWARD_TIME 200 //扫二维码前进时间，单位10ms
+#define ROBOT_ROAD_TIME1 100
+#define ROBOT_ROAD_TIME2 55
+#define ROBOT_ROAD_TIME3 257
 #define ROBOT_ROAD_TIME4 95
 #define ROBOT_ROAD_TIME5 122
 #define ROBOT_ROAD_TIME6 80
+
 
 typedef enum{
     ROBOT_REMOTE_STOP=0,
@@ -41,6 +45,8 @@ typedef enum{
     ROBOT_STAGE_WAIT_FOR_START=0,
     ROBOT_STAGE_START,
     ROBOT_STAGE_SCAN_QR,
+    ROBOT_STAGE_QR_WAIT,
+    ROBOT_STAGE_QR_FORWARD,
     ROBOT_STAGE_TURN1,
     ROBOT_STAGE_STRAGE1,
     ROBOT_STAGE_THROUGH_OBSTACLE,
@@ -68,6 +74,8 @@ void Robot_Angle_Update(hwt101_csx *hwt101, PIDController *pid, uint16_t target_
 void Robot_stop_move(void);
 void Robot_remote_control(void);
 void Robot_tick(void);
+void Robot_Claw_open(void);
+void Robot_Claw_close(void);
 uint8_t Robot_is_turning(hwt101_csx *hwt101, float target_angle);
 
 /**

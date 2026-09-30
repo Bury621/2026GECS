@@ -64,6 +64,7 @@ void App_Init(void)
     hwt101_reset_yaw(&hwt101_t);
 
     Servo_Init();
+    //Robot_Claw_close();
 
     DMG6220_Init(&dmg6220_t, &hcan1, 0x01);
     DMG6220_Enable(&dmg6220_t);
@@ -105,8 +106,8 @@ void App_Run(void)
         float sensor_data;
         hwt101_read_yaw(&hwt101_t,&sensor_data);
 
-        printf("%.2f,%d\n",sensor_data,robot_angle);
-        
+        //printf("%.2f,%d\n",sensor_data,robot_angle);
+        //printf("%d,%d\n",openmv_data.line_error,openmv_data.turning_state);
     }
     if(tim10_10ms_trigged_sign==1)
     {
@@ -115,7 +116,9 @@ void App_Run(void)
         {
             Robot_tick();
         }
+        
     }
+    
 }
 
 //收到调试包

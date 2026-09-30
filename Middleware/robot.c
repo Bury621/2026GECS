@@ -1,6 +1,8 @@
 #include "robot.h"
 #include <math.h>
 #include <stdio.h>
+#include "Servo.h"
+
 /* 轮子编号：1 左前，2 右前，3 左后，4 右后 */
 #define WHEEL_LF  1
 #define WHEEL_RF  2
@@ -14,7 +16,7 @@
 #define WHEEL_MAX_SPEED  3000
 
 #define ROBOT_REMOTE_CONTROL_SPEED 80
-#define ROBOT_QUICK_TURN_REDIUS 120.0f
+#define ROBOT_QUICK_TURN_REDIUS 123.0f
 /* 方向修正：1 保持，-1 取反，按实际调试修改 */
 static const int8_t dir_fix[4] = { 1, -1, 1, -1 };
 
@@ -485,6 +487,8 @@ void Robot_tick(void)
 
     robot_time += elapsed;
 
+
+
     if(robot_now_stage==ROBOT_STAGE_WAIT_FOR_START)
     {
         Robot_set_move(100,0,0);
@@ -494,14 +498,12 @@ void Robot_tick(void)
     }
     else if(robot_now_stage==ROBOT_STAGE_START && robot_time >= ROBOT_ROAD_TIME1)
     {
-        Robot_set_move(0,0,0);
-        
-        robot_angle=90;
+        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 90.0f,25);
 
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TURN1;
     }
-    else if(Robot_is_turning(&hwt101_t,robot_angle) && robot_now_stage==ROBOT_STAGE_TURN1)
+    else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_TURN1)
     {
         Robot_set_move(100,0,0);
         
@@ -532,10 +534,33 @@ void Robot_tick(void)
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE2; //切换到第二条直道
     }
+
+    //这个地方加扫二维码的
     else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_STRAGE2)
     {
-        Robot_set_move(100,0,0);
+        Robot_set_move(-100,0,0);
         
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_SCAN_QR;
+    }
+    else if(robot_now_stage==ROBOT_STAGE_SCAN_QR && robot_time >= ROBOT_QR_BACK_TIME)
+    {
+        Robot_set_move(0,0,0);
+
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_QR_WAIT;
+    }
+    else if(robot_now_stage==ROBOT_STAGE_QR_WAIT && robot_time >= ROBOT_QR_WAIT_TIME)
+    {
+        Robot_set_move(100,0,0);
+
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_QR_FORWARD;
+    }
+    else if(robot_now_stage==ROBOT_STAGE_QR_FORWARD && robot_time >= ROBOT_QR_FORWARD_TIME)
+    {
+        Robot_set_move(100,0,0);
+
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TURN3;
     }
@@ -584,4 +609,14 @@ void Robot_tick(void)
     {
         
     }
+}
+
+void Robot_Claw_open(void)
+{
+    Servo_Set(122);
+}
+
+void Robot_Claw_close(void)
+{
+    Servo_Set(25);
 }
