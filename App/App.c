@@ -7,6 +7,7 @@ Openmv_csx openmv_connect_t;
 DMG6220 dmg6220_t;
 hwt101_csx hwt101_t;
 PIDController robot_angle_pid_t; //角度环
+PIDController robot_y_pid_t; //水平位置环
 
 //接收数据的变量
 volatile Maxi_posion_package Maxi_posion_data={.state=1}; //从maxicam得到的坐标数据
@@ -26,7 +27,9 @@ volatile uint8_t debug_start_flag=0; //上位机发送start:1后才启动
 
 //一些变量
 volatile uint16_t robot_angle=0; //角度环的目标角度
+volatile uint16_t robot_y=22; //水平位置环的目标
 
+volatile uint8_t robot_y_pid_is_open=0; //是否开启水平位置环
 void App_Init(void)
 {
     printf("Booting...\n");
@@ -52,6 +55,18 @@ void App_Init(void)
     robot_angle_pid_t.limMinInt=-20.0f;
     robot_angle_pid_t.limMaxInt=20.0f;
     robot_angle_pid_t.T=0.1f;
+
+    PIDController_Init(&robot_y_pid_t);
+    robot_y_pid_t.Kp=1.2f;
+    robot_y_pid_t.Ki=0.0f;
+    robot_y_pid_t.Kd=0.0f;
+    robot_y_pid_t.tau=0.05f;
+    robot_y_pid_t.deadband=2;
+    robot_y_pid_t.limMin=-1000.0f;
+    robot_y_pid_t.limMax=1000.0f;
+    robot_y_pid_t.limMinInt=-20.0f;
+    robot_y_pid_t.limMaxInt=20.0f;
+    robot_y_pid_t.T=0.1f;
 
     //硬件初始化
     ssd1306_Init(&hi2c2);
@@ -107,7 +122,22 @@ void App_Run(void)
         hwt101_read_yaw(&hwt101_t,&sensor_data);
 
         //printf("%.2f,%d\n",sensor_data,robot_angle);
-        //printf("%d,%d\n",openmv_data.line_error,openmv_data.turning_state);
+        Openmv_package now_y_data=openmv_data;
+        if(robot_y_pid_is_open && now_y_data.line_error != 0)
+        {
+            if(now_y_data.turning_state)
+            {
+                Robot_set_vy(0);
+
+            }
+            else
+            {
+                Robot_set_vy(PIDController_Update(&robot_y_pid_t,robot_y,now_y_data.line_error));
+                printf("%d\n",now_y_data.line_error);
+            }
+        }
+            
+        
     }
     if(tim10_10ms_trigged_sign==1)
     {
@@ -176,10 +206,12 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
             if(((int)data)==1)
             {
                 remote_sign=3;
+                robot_y_pid_is_open=0;
             }
             else
             {
                 remote_sign=255;
+                //robot_y_pid_is_open=1;
             }
         }
         if(strcmp(sign,"right")==0)
@@ -187,10 +219,12 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
             if(((int)data)==1)
             {
                 remote_sign=4;
+                robot_y_pid_is_open=0;
             }
             else
             {
                 remote_sign=255;
+                //robot_y_pid_is_open=1;
             }
         }
         if(strcmp(sign,"Stop")==0)
