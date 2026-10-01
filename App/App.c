@@ -84,9 +84,15 @@ void App_Init(void)
     DMG6220_Init(&dmg6220_t, &hcan1, 0x01);
     DMG6220_Enable(&dmg6220_t);
     HAL_Delay(100);
-    DMG6220_MoveAngle(&dmg6220_t, 10, 270.0f);
+    DMG6220_MoveAngle(&dmg6220_t, 190, 130.0f);
 
     Robot_set_move(0,0,0); //停车
+
+    Ray_on();
+    Servo_Set(90);
+
+    // HAL_Delay(5000);
+    // Emm_Speed_Mode(0x06,20,0,EMM_SYNC_DISABLE);
 
     //片上外设初始化
     HAL_TIM_Base_Start_IT(&htim7); //开启tim7
@@ -158,7 +164,7 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
     {
         if(strcmp(sign,"motor")==0)
         {
-            DMG6220_MoveAngle(&dmg6220_t, (int)data, 270.0f);
+            DMG6220_MoveAngle(&dmg6220_t, (int)data, 145.0f);
         }
         if(strcmp(sign,"servo")==0)
         {
