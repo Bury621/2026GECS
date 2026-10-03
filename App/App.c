@@ -84,12 +84,12 @@ void App_Init(void)
     DMG6220_Init(&dmg6220_t, &hcan1, 0x01);
     DMG6220_Enable(&dmg6220_t);
     HAL_Delay(100);
-    DMG6220_MoveAngle(&dmg6220_t, 280, 120.0f);
+    DMG6220_MoveAngle(&dmg6220_t, 100, 120.0f);
 
     Robot_set_move(0,0,0); //停车
 
     Ray_on();
-    Servo_Set(90);
+    Robot_Claw_close();
 
     // HAL_Delay(5000);
     // Emm_Speed_Mode(0x06,20,0,EMM_SYNC_DISABLE);
@@ -100,6 +100,7 @@ void App_Init(void)
     HAL_UART_Receive_IT(&huart1,&usart1_rx,1); //开启串口中断接收
 
     printf("Ready\n");
+    Maxi_Send_cmd(0x01);
 }
 void App_Run(void)
 {
@@ -129,6 +130,7 @@ void App_Run(void)
 
         //printf("%.2f,%d\n",sensor_data,robot_angle);
         Openmv_package now_y_data=openmv_data;
+        //y闭环
         if(robot_y_pid_is_open && now_y_data.line_error != 0)
         {
             if(now_y_data.turning_state)
@@ -143,7 +145,7 @@ void App_Run(void)
             }
         }
             
-        
+        printf("%d,%d\n",Maxi_posion_data.x,Maxi_posion_data.y);
     }
     if(tim10_10ms_trigged_sign==1)
     {
@@ -267,6 +269,10 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
         {
             robot_diff_turn_target_angle_deg=data;
             robot_diff_turn_start_request=1;
+        }
+        if(strcmp(sign,"high")==0)
+        {
+            Emm_position_Mode(0x06,100,0,data,EMM_MODE_RELATIVE_TO_PREVIOUS,EMM_SYNC_DISABLE);
         }
     }
 }

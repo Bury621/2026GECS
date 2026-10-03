@@ -1,6 +1,7 @@
 #include "robot.h"
 #include <math.h>
 #include <stdio.h>
+#include "Maxi_Connect.h"
 #include "Servo.h"
 
 /* 轮子编号：1 左前，2 右前，3 左后，4 右后 */
@@ -51,7 +52,7 @@ static uint32_t robot_time=0; //用来计时的变量
 static uint32_t robot_last_tick=0;
 
 /* 保存小车当前状态 */
-static Robot_stage robot_now_stage=ROBOT_STAGE_WAIT_FOR_START; //小车当前状态的状态机
+static Robot_stage robot_now_stage=ROBOT_STAGE_STRAGE4; //直接从最后一个差速转弯完成处开始调试
 
 Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
 
@@ -626,7 +627,11 @@ void Robot_tick(void)
         
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE5;
-        
+
+        DMG6220_MoveAngle(&dmg6220_t, 190, 120.0f);
+        Maxi_Send_cmd(0x01);
+        //HAL_Delay(4);
+        //Emm_position_Mode(0x06,-100,0,5000,EMM_MODE_RELATIVE_TO_PREVIOUS,EMM_SYNC_DISABLE);
     }
     /* 最后一段直行结束：停车，进入任务一并启动任务电机 */
     else if(robot_now_stage==ROBOT_STAGE_STRAGE5 && robot_time >= ROBOT_ROAD_TIME6) //if里面写的是什么，这里干的就是什么事情
@@ -637,8 +642,9 @@ void Robot_tick(void)
         robot_now_stage=ROBOT_STAGE_TASK1; //切换到做任务一模式
         robot_task_1_state=1; //置标志位，走到任务一了
 
-        DMG6220_MoveAngle(&dmg6220_t, 100, 120.0f); //
+        DMG6220_MoveAngle(&dmg6220_t, 145, 120.0f);
     }
+    
     /* 任务一完成后的预留分支，目前没有需要执行的内容 */
     else if(robot_task_1_state==2)
     {
@@ -648,10 +654,10 @@ void Robot_tick(void)
 
 void Robot_Claw_open(void)
 {
-    Servo_Set(122);
+    Servo_Set(135);
 }
 
 void Robot_Claw_close(void)
 {
-    Servo_Set(25);
+    Servo_Set(35);
 }
