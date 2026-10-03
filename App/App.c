@@ -84,7 +84,7 @@ void App_Init(void)
     DMG6220_Init(&dmg6220_t, &hcan1, 0x01);
     DMG6220_Enable(&dmg6220_t);
     HAL_Delay(100);
-    DMG6220_MoveAngle(&dmg6220_t, 190, 130.0f);
+    DMG6220_MoveAngle(&dmg6220_t, 280, 120.0f);
 
     Robot_set_move(0,0,0); //停车
 

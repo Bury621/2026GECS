@@ -16,7 +16,7 @@
 #define WHEEL_MAX_SPEED  3000
 
 #define ROBOT_REMOTE_CONTROL_SPEED 80
-#define ROBOT_QUICK_TURN_REDIUS 123.0f
+#define ROBOT_QUICK_TURN_REDIUS 130.0f
 /* 方向修正：1 保持，-1 取反，按实际调试修改 */
 static const int8_t dir_fix[4] = { 1, -1, 1, -1 };
 
@@ -57,6 +57,7 @@ Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
 
 extern volatile uint16_t robot_angle; //App.c里面的，虽然耦合度很高很屎山但是不管了，懒得改了妈的
 extern hwt101_csx hwt101_t; //App.c里面的陀螺仪句柄
+extern DMG6220 dmg6220_t;
 
 //任务是否完成状态，0表示没走到，1表示走到了还没完成，2表示完成了
 uint8_t robot_task_1_state=0;
@@ -473,22 +474,26 @@ void Robot_tick(void)
     uint32_t now = HAL_GetTick();
     uint32_t elapsed = 0;
 
+    /* 计算距离上次进入Robot_tick经过了多少个10ms周期 */
     if (robot_last_tick != 0)
     {
         elapsed = (now - robot_last_tick) / 10U;
     }
     robot_last_tick = now;
 
+    /* 差速转弯由Robot_Angle_Update控制，转弯期间暂停状态机计时 */
     if (Robot_is_differential_turning())
     {
         robot_time = 0;
         return;
     }
 
+    /* 没有在差速转弯时，累加状态机运行时间 */
     robot_time += elapsed;
 
 
 
+    /* 初始状态：开始前进，然后进入发车后的直行计时 */
     if(robot_now_stage==ROBOT_STAGE_WAIT_FOR_START)
     {
         Robot_set_move(100,0,0);
@@ -496,6 +501,7 @@ void Robot_tick(void)
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_START;
     }
+    /* 发车后直行ROBOT_ROAD_TIME1，随后差速转到90度 */
     else if(robot_now_stage==ROBOT_STAGE_START && robot_time >= ROBOT_ROAD_TIME1)
     {
         Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 90.0f,25);
@@ -503,6 +509,7 @@ void Robot_tick(void)
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TURN1;
     }
+    /* 第一次差速转弯完成：开始第一段直行 */
     else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_TURN1)
     {
         Robot_set_move(100,0,0);
@@ -510,6 +517,7 @@ void Robot_tick(void)
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE1;
     }
+    /* 第一段直行结束：差速转到0度，准备穿越障碍物 */
     else if(robot_now_stage==ROBOT_STAGE_STRAGE1 && robot_time >= ROBOT_ROAD_TIME2)
     {
         Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 0.0f,25);
@@ -518,13 +526,28 @@ void Robot_tick(void)
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_THROUGH_OBSTACLE; //切换到穿过障碍物状态
     }
+    /* 穿越障碍物前的差速转弯完成：先停车，进入等待状态 */
     else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_THROUGH_OBSTACLE)
     {
+        Robot_set_move(0,0,0);
+
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_THROUGH_OBSTACLE_WAIT;
+    }
+    /* 穿越障碍物前等待时间未到：持续保持停车 */
+    // else if(robot_now_stage==ROBOT_STAGE_THROUGH_OBSTACLE_WAIT && robot_time < ROBOT_OBSTACLE_TURN_WAIT_TIME)
+    // {
+    //     Robot_set_move(0,0,0);
+    // }
+    /* 等待时间到：前进穿越障碍物，随后进入下一段直行计时 */
+    else if(robot_now_stage==ROBOT_STAGE_THROUGH_OBSTACLE_WAIT && robot_time >= ROBOT_OBSTACLE_TURN_WAIT_TIME)
+    {
         Robot_set_move(50,0,0);
-        
+
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TURN2;
     }
+    /* 穿越障碍物后的直行结束：差速转到90度，进入第二条直道 */
     else if(robot_now_stage==ROBOT_STAGE_TURN2 && robot_time >= ROBOT_ROAD_TIME3)
     {
         //Robot_set_move(0,0,0);
@@ -536,6 +559,7 @@ void Robot_tick(void)
     }
 
     //这个地方加扫二维码的
+    /* 第二条直道前的差速转弯完成：后退，准备扫描二维码 */
     else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_STRAGE2)
     {
         Robot_set_move(-100,0,0);
@@ -543,6 +567,7 @@ void Robot_tick(void)
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_SCAN_QR;
     }
+    /* 扫描二维码后退时间结束：停车等待二维码处理 */
     else if(robot_now_stage==ROBOT_STAGE_SCAN_QR && robot_time >= ROBOT_QR_BACK_TIME)
     {
         Robot_set_move(0,0,0);
@@ -550,6 +575,7 @@ void Robot_tick(void)
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_QR_WAIT;
     }
+    /* 二维码等待时间结束：开始向前行驶 */
     else if(robot_now_stage==ROBOT_STAGE_QR_WAIT && robot_time >= ROBOT_QR_WAIT_TIME)
     {
         Robot_set_move(100,0,0);
@@ -557,6 +583,7 @@ void Robot_tick(void)
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_QR_FORWARD;
     }
+    /* 二维码后前进时间结束：继续前进，并进入下一次差速转弯计时 */
     else if(robot_now_stage==ROBOT_STAGE_QR_FORWARD && robot_time >= ROBOT_QR_FORWARD_TIME)
     {
         Robot_set_move(100,0,0);
@@ -564,6 +591,7 @@ void Robot_tick(void)
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TURN3;
     }
+    /* 二维码后的直行结束之后再走ROBOT_ROAD_TIME4然后就差速转弯 */
     else if(robot_now_stage==ROBOT_STAGE_TURN3 && robot_time >= ROBOT_ROAD_TIME4)
     {
         // Robot_set_move(0,0,0);
@@ -572,6 +600,7 @@ void Robot_tick(void)
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE3;
     }
+    /* 差速转弯完成：开始下一段直行 */
     else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_STRAGE3)
     {
         Robot_set_move(100,0,0);
@@ -579,6 +608,7 @@ void Robot_tick(void)
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TURN4;
     }
+    /* 下一段直行结束：差速转到270度 */
     else if(robot_now_stage==ROBOT_STAGE_TURN4 && robot_time >= ROBOT_ROAD_TIME5) //if里面写的是什么，这里干的就是什么事情
     {
         //Robot_set_move(0,0,0);
@@ -589,14 +619,16 @@ void Robot_tick(void)
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE4;
     }
+    /* 270度差速转弯完成：前进进入最后一段直行 */
     else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_STRAGE4)
     {
-        Robot_set_move(100,0,0);
+        Robot_set_move(50,0,0);
         
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE5;
         
     }
+    /* 最后一段直行结束：停车，进入任务一并启动任务电机 */
     else if(robot_now_stage==ROBOT_STAGE_STRAGE5 && robot_time >= ROBOT_ROAD_TIME6) //if里面写的是什么，这里干的就是什么事情
     {
         Robot_set_move(0,0,0);
@@ -604,7 +636,10 @@ void Robot_tick(void)
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TASK1; //切换到做任务一模式
         robot_task_1_state=1; //置标志位，走到任务一了
+
+        DMG6220_MoveAngle(&dmg6220_t, 100, 120.0f); //
     }
+    /* 任务一完成后的预留分支，目前没有需要执行的内容 */
     else if(robot_task_1_state==2)
     {
         
