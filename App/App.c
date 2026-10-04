@@ -10,6 +10,7 @@ PIDController robot_angle_pid_t; //角度环
 PIDController robot_y_pid_t; //水平位置环
 PIDController robot_task1_ball_pid_t; //任务一的控制环
 PIDController robot_task2_target_pid_t; //任务二的控制环
+PIDController robot_task3_hostage_pid_t; //任务三的控制环
 
 //接收数据的变量
 volatile Maxi_posion_package Maxi_posion_data={.state=1}; //从maxicam得到的坐标数据
@@ -94,6 +95,18 @@ void App_Init(void)
     robot_task2_target_pid_t.limMaxInt=20.0f;
     robot_task2_target_pid_t.T=0.1f;
 
+    PIDController_Init(&robot_task3_hostage_pid_t);
+    robot_task3_hostage_pid_t.Kp=0.3f;
+    robot_task3_hostage_pid_t.Ki=0.015f;
+    robot_task3_hostage_pid_t.Kd=0.001f;
+    robot_task3_hostage_pid_t.tau=0.05f;
+    robot_task3_hostage_pid_t.deadband=2;
+    robot_task3_hostage_pid_t.limMin=-50.0f;
+    robot_task3_hostage_pid_t.limMax=50.0f;
+    robot_task3_hostage_pid_t.limMinInt=-20.0f;
+    robot_task3_hostage_pid_t.limMaxInt=20.0f;
+    robot_task3_hostage_pid_t.T=0.1f;
+    
     //硬件初始化
     ssd1306_Init(&hi2c2);
     ssd1306_Fill(Black);

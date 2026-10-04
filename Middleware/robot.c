@@ -59,7 +59,7 @@ static uint32_t robot_task2_laser_on_start_tick=0;
 static uint8_t robot_task2_laser_on_timing=0;
 
 /* 保存小车当前状态 */
-static Robot_stage robot_now_stage=ROBOT_STAGE_TASK1_DONE; //直接从任务一结束开始调试
+static Robot_stage robot_now_stage=ROBOT_STAGE_TO_TASK3_STRAIGHT2; //直接从任务二结束开始调试
 
 Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
 
@@ -68,8 +68,9 @@ extern hwt101_csx hwt101_t; //App.c里面的陀螺仪句柄
 extern DMG6220 dmg6220_t;
 
 extern volatile Maxi_posion_package Maxi_posion_data; //maxicam的数据
-extern PIDController robot_task1_ball_pid_t; //任务一那个小球控制的pid
+extern PIDController robot_task1_ball_pid_t; //任务一闭环pid
 extern PIDController robot_task2_target_pid_t; //任务二闭环pid
+extern PIDController robot_task3_hostage_pid_t; //任务三闭环pid
 
 //任务是否完成状态，0表示没走到，1表示走到了还没完成，2表示完成了
 uint8_t robot_task_1_state=0;
@@ -757,10 +758,37 @@ void Robot_tick(void)
         }
         else if((now-robot_task2_laser_on_start_tick) >= ROBOT_TASK2_LASER_ON_TIME_MS)
         {
-            //Ray_off();
+            Ray_off();
             robot_task2_laser_on_timing=0;
             robot_now_stage=ROBOT_STAGE_TO_TASK3_STRAIGHT1;
             robot_time=0;
+        }
+    }
+    else if(robot_now_stage==ROBOT_STAGE_TO_TASK3_STRAIGHT1 && robot_time >= ROBOT_ROAD_TIME8)
+    {
+        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 180.0f,25);
+
+        robot_time=0;
+        robot_now_stage=ROBOT_STAGE_TO_TASK3_STRAIGHT2; //切换状态
+    }
+    //转弯完成了
+    else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_TO_TASK3_STRAIGHT2)
+    {
+        Robot_set_move(50,0,0); //慢速直行
+        DMG6220_MoveAngle(&dmg6220_t, 100, 120.0f);
+
+        robot_time=0;
+        robot_now_stage=ROBOT_STAGE_TASK3; //切换状态
+        Maxi_Send_cmd(0x03); //切换目标
+        Maxi_posion_data.state=1; //清零状态
+        
+        
+    }
+    else if(robot_now_stage==ROBOT_STAGE_TASK3)
+    {
+        if(Maxi_posion_data.state==0)
+        {
+            Robot_set_vx(-PIDController_Update(&robot_task3_hostage_pid_t,ROBOT_TASK3_HOSTAGE_TARGET,Maxi_posion_data.x));
         }
     }
 }

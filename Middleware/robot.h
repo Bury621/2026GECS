@@ -33,6 +33,9 @@
 #define ROBOT_ROAD_TIME6 80
 
 #define ROBOT_ROAD_TIME7 0 //从任务一到任务二那段直线的时间
+#define ROBOT_ROAD_TIME8 80 //完成任务二之后那个弯道的时间
+
+
 
 #define ROBOT_TASK1_BALL_TARGET 134 //任务一闭环目标小球的位置
 #define ROBOT_TASK1_BALL_ERROR_TOLERANCE 2.0f //任务一位置误差容差
@@ -43,7 +46,7 @@
 #define ROBOT_TASK2_TARGET_STABLE_TIME_MS 200U //任务二误差持续在容差内的时间
 #define ROBOT_TASK2_LASER_ON_TIME_MS 2000U //任务二激光打开持续时间
 
-
+#define ROBOT_TASK3_HOSTAGE_TARGET 300 //任务三闭环人质的位置
 typedef enum{
     ROBOT_REMOTE_STOP=0,
     ROBOT_REMOTE_FORWARD,
@@ -73,7 +76,9 @@ typedef enum{
     ROBOT_STAGE_TASK1_DONE,
     ROBOT_STAGE_TASK2,
     ROBOT_STAGE_TASK2_DONE,
-    ROBOT_STAGE_TO_TASK3_STRAIGHT1
+    ROBOT_STAGE_TO_TASK3_STRAIGHT1,
+    ROBOT_STAGE_TO_TASK3_STRAIGHT2,
+    ROBOT_STAGE_TASK3
 }Robot_stage;
 
 typedef enum{
