@@ -50,9 +50,11 @@ static uint32_t robot_diff_turn_start_tick = 0;
 /* 计时器内部状态 */
 static uint32_t robot_time=0; //用来计时的变量
 static uint32_t robot_last_tick=0;
+static uint32_t robot_task1_ball_stable_start_tick=0;
+static uint8_t robot_task1_ball_stable_timing=0;
 
 /* 保存小车当前状态 */
-static Robot_stage robot_now_stage=ROBOT_STAGE_STRAGE4; //直接从最后一个差速转弯完成处开始调试
+static Robot_stage robot_now_stage=ROBOT_STAGE_TASK1_DONE; //直接从任务一结束开始调试
 
 Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
 
@@ -62,7 +64,7 @@ extern DMG6220 dmg6220_t;
 
 extern volatile Maxi_posion_package Maxi_posion_data; //maxicam的数据
 extern PIDController robot_task1_ball_pid_t; //任务一那个小球控制的pid
-
+extern PIDController robot_task2_target_pid_t; //任务二闭环pid
 
 //任务是否完成状态，0表示没走到，1表示走到了还没完成，2表示完成了
 uint8_t robot_task_1_state=0;
@@ -624,42 +626,90 @@ void Robot_tick(void)
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE4;
     }
-    /* 270度差速转弯完成：前进进入最后一段直行 */
+    /* 270度差速转弯完成：进入任务一 */
     else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_STRAGE4)
     {
         Robot_set_move(50,0,0);
         
         robot_time=0; //清零
-        robot_now_stage=ROBOT_STAGE_STRAGE5;
+        robot_now_stage=ROBOT_STAGE_TASK1;
 
         DMG6220_MoveAngle(&dmg6220_t, 190, 120.0f);
         Maxi_Send_cmd(0x01);
         //HAL_Delay(4);
         //Emm_position_Mode(0x06,-100,0,5000,EMM_MODE_RELATIVE_TO_PREVIOUS,EMM_SYNC_DISABLE);
     }
-    /* 最后一段直行结束：继续慢速移动，然后闭环一下目标小球的位置 */
-    else if(robot_now_stage==ROBOT_STAGE_STRAGE5) //if里面写的是什么，这里干的就是什么事情
+    /* 任务一：闭环目标小球的位置 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK1)
     {
         //Robot_set_move(0,0,0);
 
         robot_time=0; //清零
-        //robot_now_stage=ROBOT_STAGE_TASK1; //切换到做任务一模式
-
         if(robot_task_1_state == 0)
         {
             DMG6220_MoveAngle(&dmg6220_t, 145, 120.0f);
+            robot_task1_ball_stable_timing=0;
         }
         robot_task_1_state=1; //置标志位，走到任务一了
 
         if(Maxi_posion_data.state == 0) //如果有有效数据的话
         {
+            float ball_error=(float)ROBOT_TASK1_BALL_TARGET-(float)Maxi_posion_data.x;
+
             Robot_set_vx(-PIDController_Update(&robot_task1_ball_pid_t,ROBOT_TASK1_BALL_TARGET,Maxi_posion_data.x));
+
+            if(fabsf(ball_error) < ROBOT_TASK1_BALL_ERROR_TOLERANCE)
+            {
+                if(robot_task1_ball_stable_timing == 0)
+                {
+                    robot_task1_ball_stable_timing=1;
+                    robot_task1_ball_stable_start_tick=now;
+                }
+                else if((now-robot_task1_ball_stable_start_tick) >= ROBOT_TASK1_BALL_STABLE_TIME_MS)
+                {
+                    //在目标值停留了一段时间
+                    
+                    Robot_set_vx(0);
+                    robot_task_1_state=2;
+                    robot_now_stage=ROBOT_STAGE_TASK1_DONE;
+
+                    //重置maxi的数据，防止数据干扰
+                    Maxi_posion_data.state = 1;
+                }
+            }
+            else
+            {
+                robot_task1_ball_stable_timing=0;
+            }
+        }
+        else
+        {
+            robot_task1_ball_stable_timing=0;
         }
     }
     
-    /* 任务一完成后的预留分支，目前没有需要执行的内容 */
-    else if(robot_task_1_state==2)
+    /* 这个地方到时候加把小球加起来放到排爆桶，然后再直行开到任务二的代码*/
+    if(0); //
+
+    /* 任务一完成后的预留分支，现在为了方便调试任务二就直行短时间然后切换到真正的任务二*/
+    else if(robot_now_stage==ROBOT_STAGE_TASK1_DONE && robot_time >=ROBOT_ROAD_TIME7)
     {
+        Robot_set_vx(50); //开始运动
+        robot_now_stage=ROBOT_STAGE_TASK2; //切到任务二
+        DMG6220_MoveAngle(&dmg6220_t, 100, 120.0f); //看向靶子
+        Maxi_Send_cmd(0x02); //让摄像机拍靶子
+        
+        Maxi_posion_data.state=1;
+        robot_time=0;
+    }
+
+    else if(robot_now_stage==ROBOT_STAGE_TASK2) //开始任务二
+    {
+        
+        if(Maxi_posion_data.state==0)
+        {
+            Robot_set_vx(-PIDController_Update(&robot_task2_target_pid_t,ROBOT_TASK2_TARGET_TARGET,Maxi_posion_data.x));
+        }
         
     }
 }
