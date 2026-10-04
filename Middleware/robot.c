@@ -57,6 +57,8 @@ static uint32_t robot_task2_target_stable_start_tick=0;
 static uint8_t robot_task2_target_stable_timing=0;
 static uint32_t robot_task2_laser_on_start_tick=0;
 static uint8_t robot_task2_laser_on_timing=0;
+static uint32_t robot_task3_hostage_stable_start_tick=0;
+static uint8_t robot_task3_hostage_stable_timing=0;
 
 /* 保存小车当前状态 */
 static Robot_stage robot_now_stage=ROBOT_STAGE_TO_TASK3_STRAIGHT2; //直接从任务二结束开始调试
@@ -677,6 +679,7 @@ void Robot_tick(void)
                     
                     Robot_set_vx(0);
                     robot_task_1_state=2;
+                    robot_time=0;
                     robot_now_stage=ROBOT_STAGE_TASK1_DONE;
 
                     //重置maxi的数据，防止数据干扰
@@ -732,6 +735,7 @@ void Robot_tick(void)
                     Robot_set_vx(0);
                     robot_task_2_state=2;
                     robot_now_stage=ROBOT_STAGE_TASK2_DONE;
+                    robot_time=0;
 
                     //重置maxi的数据，防止数据干扰
                     Maxi_posion_data.state=1;
@@ -781,15 +785,50 @@ void Robot_tick(void)
         robot_now_stage=ROBOT_STAGE_TASK3; //切换状态
         Maxi_Send_cmd(0x03); //切换目标
         Maxi_posion_data.state=1; //清零状态
-        
-        
+        robot_task_3_state=1;
+        robot_task3_hostage_stable_timing=0;
     }
     else if(robot_now_stage==ROBOT_STAGE_TASK3)
     {
         if(Maxi_posion_data.state==0)
         {
+            float hostage_error=(float)ROBOT_TASK3_HOSTAGE_TARGET-(float)Maxi_posion_data.x;
+
             Robot_set_vx(-PIDController_Update(&robot_task3_hostage_pid_t,ROBOT_TASK3_HOSTAGE_TARGET,Maxi_posion_data.x));
+
+            if(fabsf(hostage_error) < ROBOT_TASK3_HOSTAGE_ERROR_TOLERANCE)
+            {
+                if(robot_task3_hostage_stable_timing == 0)
+                {
+                    robot_task3_hostage_stable_timing=1;
+                    robot_task3_hostage_stable_start_tick=now;
+                }
+                else if((now-robot_task3_hostage_stable_start_tick) >= ROBOT_TASK3_HOSTAGE_STABLE_TIME_MS)
+                {
+                    Robot_set_move(80,0,0); //设置指定的速度，前往终点
+                    robot_task_3_state=2;
+                    robot_time=0; //清零时间
+                    robot_now_stage=ROBOT_STAGE_TASK3_DONE;
+
+                    //重置maxi的数据，防止数据干扰
+                    Maxi_posion_data.state=1;
+                }
+            }
+            else
+            {
+                robot_task3_hostage_stable_timing=0;
+            }
         }
+        else
+        {
+            robot_task3_hostage_stable_timing=0;
+        }
+    }
+    //前往终点
+    else if(robot_now_stage==ROBOT_STAGE_TASK3_DONE && robot_time >= ROBOT_ROAD_TIME9)
+    {
+        Robot_set_move(0,0,0); //停在终点
+        robot_now_stage=ROBOT_STAGE_END; //切换到结束状态
     }
 }
 

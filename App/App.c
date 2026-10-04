@@ -118,7 +118,6 @@ void App_Init(void)
     hwt101_reset_yaw(&hwt101_t);
 
     Servo_Init();
-    //Robot_Claw_close();
 
     DMG6220_Init(&dmg6220_t, &hcan1, 0x01);
     DMG6220_Enable(&dmg6220_t);
@@ -127,11 +126,8 @@ void App_Init(void)
 
     Robot_set_move(0,0,0); //停车
 
-    Ray_on();
+    Ray_off();
     Robot_Claw_close();
-
-    // HAL_Delay(5000);
-    // Emm_Speed_Mode(0x06,20,0,EMM_SYNC_DISABLE);
 
     //片上外设初始化
     HAL_TIM_Base_Start_IT(&htim7); //开启tim7
@@ -139,7 +135,7 @@ void App_Init(void)
     HAL_UART_Receive_IT(&huart1,&usart1_rx,1); //开启串口中断接收
 
     printf("Ready\n");
-    Maxi_Send_cmd(0x01);
+    //Maxi_Send_cmd(0x01);
 }
 void App_Run(void)
 {
