@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 #include "Maxi_Connect.h"
+#include "Ray.h"
 #include "Servo.h"
 
 /* 轮子编号：1 左前，2 右前，3 左后，4 右后 */
@@ -52,6 +53,10 @@ static uint32_t robot_time=0; //用来计时的变量
 static uint32_t robot_last_tick=0;
 static uint32_t robot_task1_ball_stable_start_tick=0;
 static uint8_t robot_task1_ball_stable_timing=0;
+static uint32_t robot_task2_target_stable_start_tick=0;
+static uint8_t robot_task2_target_stable_timing=0;
+static uint32_t robot_task2_laser_on_start_tick=0;
+static uint8_t robot_task2_laser_on_timing=0;
 
 /* 保存小车当前状态 */
 static Robot_stage robot_now_stage=ROBOT_STAGE_TASK1_DONE; //直接从任务一结束开始调试
@@ -700,17 +705,63 @@ void Robot_tick(void)
         Maxi_Send_cmd(0x02); //让摄像机拍靶子
         
         Maxi_posion_data.state=1;
+        robot_task_2_state=1;
+        robot_task2_target_stable_timing=0;
+        robot_task2_laser_on_timing=0;
         robot_time=0;
     }
 
     else if(robot_now_stage==ROBOT_STAGE_TASK2) //开始任务二
     {
-        
         if(Maxi_posion_data.state==0)
         {
+            float target_error=(float)ROBOT_TASK2_TARGET_TARGET-(float)Maxi_posion_data.x;
+
             Robot_set_vx(-PIDController_Update(&robot_task2_target_pid_t,ROBOT_TASK2_TARGET_TARGET,Maxi_posion_data.x));
+
+            if(fabsf(target_error) < ROBOT_TASK2_TARGET_ERROR_TOLERANCE)
+            {
+                if(robot_task2_target_stable_timing == 0)
+                {
+                    robot_task2_target_stable_timing=1;
+                    robot_task2_target_stable_start_tick=now;
+                }
+                else if((now-robot_task2_target_stable_start_tick) >= ROBOT_TASK2_TARGET_STABLE_TIME_MS)
+                {
+                    Robot_set_vx(0);
+                    robot_task_2_state=2;
+                    robot_now_stage=ROBOT_STAGE_TASK2_DONE;
+
+                    //重置maxi的数据，防止数据干扰
+                    Maxi_posion_data.state=1;
+                }
+            }
+            else
+            {
+                robot_task2_target_stable_timing=0;
+            }
         }
-        
+        else
+        {
+            robot_task2_target_stable_timing=0;
+        }
+    }
+
+    else if(robot_now_stage==ROBOT_STAGE_TASK2_DONE)
+    {
+        if(robot_task2_laser_on_timing == 0)
+        {
+            Ray_on();
+            robot_task2_laser_on_timing=1;
+            robot_task2_laser_on_start_tick=now;
+        }
+        else if((now-robot_task2_laser_on_start_tick) >= ROBOT_TASK2_LASER_ON_TIME_MS)
+        {
+            //Ray_off();
+            robot_task2_laser_on_timing=0;
+            robot_now_stage=ROBOT_STAGE_TO_TASK3_STRAIGHT1;
+            robot_time=0;
+        }
     }
 }
 

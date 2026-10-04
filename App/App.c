@@ -72,8 +72,8 @@ void App_Init(void)
 
     PIDController_Init(&robot_task1_ball_pid_t);
     robot_task1_ball_pid_t.Kp=0.3f;
-    robot_task1_ball_pid_t.Ki=0.015f;
-    robot_task1_ball_pid_t.Kd=0.001f;
+    robot_task1_ball_pid_t.Ki=0.0012f;
+    robot_task1_ball_pid_t.Kd=0.0f;
     robot_task1_ball_pid_t.tau=0.05f;
     robot_task1_ball_pid_t.deadband=2;
     robot_task1_ball_pid_t.limMin=-50.0f;

@@ -39,6 +39,9 @@
 #define ROBOT_TASK1_BALL_STABLE_TIME_MS 200U //误差持续在容差内的时间
 
 #define ROBOT_TASK2_TARGET_TARGET 300 //任务二闭环目标靶子的位置
+#define ROBOT_TASK2_TARGET_ERROR_TOLERANCE 2.0f //任务二位置误差容差
+#define ROBOT_TASK2_TARGET_STABLE_TIME_MS 200U //任务二误差持续在容差内的时间
+#define ROBOT_TASK2_LASER_ON_TIME_MS 2000U //任务二激光打开持续时间
 
 
 typedef enum{
@@ -68,7 +71,9 @@ typedef enum{
     ROBOT_STAGE_STRAGE4,
     ROBOT_STAGE_TASK1,
     ROBOT_STAGE_TASK1_DONE,
-    ROBOT_STAGE_TASK2
+    ROBOT_STAGE_TASK2,
+    ROBOT_STAGE_TASK2_DONE,
+    ROBOT_STAGE_TO_TASK3_STRAIGHT1
 }Robot_stage;
 
 typedef enum{
