@@ -32,7 +32,7 @@
 #define ROBOT_ROAD_TIME5 116
 #define ROBOT_ROAD_TIME6 80
 
-
+#define ROBOT_TASK1_BALL_TARGET 134 //任务一闭环目标小球的位置，试一下闭环x坐标先
 typedef enum{
     ROBOT_REMOTE_STOP=0,
     ROBOT_REMOTE_FORWARD,

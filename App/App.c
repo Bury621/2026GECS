@@ -8,6 +8,8 @@ DMG6220 dmg6220_t;
 hwt101_csx hwt101_t;
 PIDController robot_angle_pid_t; //角度环
 PIDController robot_y_pid_t; //水平位置环
+PIDController robot_task1_ball_pid_t; //任务一的控制环
+PIDController robot_task2_target_pid_t; //任务二的控制环
 
 //接收数据的变量
 volatile Maxi_posion_package Maxi_posion_data={.state=1}; //从maxicam得到的坐标数据
@@ -68,6 +70,30 @@ void App_Init(void)
     robot_y_pid_t.limMaxInt=20.0f;
     robot_y_pid_t.T=0.1f;
 
+    PIDController_Init(&robot_task1_ball_pid_t);
+    robot_task1_ball_pid_t.Kp=0.3f;
+    robot_task1_ball_pid_t.Ki=0.015f;
+    robot_task1_ball_pid_t.Kd=0.001f;
+    robot_task1_ball_pid_t.tau=0.05f;
+    robot_task1_ball_pid_t.deadband=2;
+    robot_task1_ball_pid_t.limMin=-50.0f;
+    robot_task1_ball_pid_t.limMax=50.0f;
+    robot_task1_ball_pid_t.limMinInt=-20.0f;
+    robot_task1_ball_pid_t.limMaxInt=20.0f;
+    robot_task1_ball_pid_t.T=0.1f;
+
+    PIDController_Init(&robot_task2_target_pid_t);
+    robot_task2_target_pid_t.Kp=0.3f;
+    robot_task2_target_pid_t.Ki=0.015f;
+    robot_task2_target_pid_t.Kd=0.001f;
+    robot_task2_target_pid_t.tau=0.05f;
+    robot_task2_target_pid_t.deadband=2;
+    robot_task2_target_pid_t.limMin=-50.0f;
+    robot_task2_target_pid_t.limMax=50.0f;
+    robot_task2_target_pid_t.limMinInt=-20.0f;
+    robot_task2_target_pid_t.limMaxInt=20.0f;
+    robot_task2_target_pid_t.T=0.1f;
+
     //硬件初始化
     ssd1306_Init(&hi2c2);
     ssd1306_Fill(Black);
@@ -84,7 +110,7 @@ void App_Init(void)
     DMG6220_Init(&dmg6220_t, &hcan1, 0x01);
     DMG6220_Enable(&dmg6220_t);
     HAL_Delay(100);
-    DMG6220_MoveAngle(&dmg6220_t, 100, 120.0f);
+    DMG6220_MoveAngle(&dmg6220_t, 145, 120.0f);
 
     Robot_set_move(0,0,0); //停车
 

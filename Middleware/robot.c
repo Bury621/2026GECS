@@ -60,6 +60,10 @@ extern volatile uint16_t robot_angle; //App.c里面的，虽然耦合度很高�
 extern hwt101_csx hwt101_t; //App.c里面的陀螺仪句柄
 extern DMG6220 dmg6220_t;
 
+extern volatile Maxi_posion_package Maxi_posion_data; //maxicam的数据
+extern PIDController robot_task1_ball_pid_t; //任务一那个小球控制的pid
+
+
 //任务是否完成状态，0表示没走到，1表示走到了还没完成，2表示完成了
 uint8_t robot_task_1_state=0;
 uint8_t robot_task_2_state=0;
@@ -633,16 +637,24 @@ void Robot_tick(void)
         //HAL_Delay(4);
         //Emm_position_Mode(0x06,-100,0,5000,EMM_MODE_RELATIVE_TO_PREVIOUS,EMM_SYNC_DISABLE);
     }
-    /* 最后一段直行结束：停车，进入任务一并启动任务电机 */
-    else if(robot_now_stage==ROBOT_STAGE_STRAGE5 && robot_time >= ROBOT_ROAD_TIME6) //if里面写的是什么，这里干的就是什么事情
+    /* 最后一段直行结束：继续慢速移动，然后闭环一下目标小球的位置 */
+    else if(robot_now_stage==ROBOT_STAGE_STRAGE5) //if里面写的是什么，这里干的就是什么事情
     {
-        Robot_set_move(0,0,0);
+        //Robot_set_move(0,0,0);
 
         robot_time=0; //清零
-        robot_now_stage=ROBOT_STAGE_TASK1; //切换到做任务一模式
+        //robot_now_stage=ROBOT_STAGE_TASK1; //切换到做任务一模式
+
+        if(robot_task_1_state == 0)
+        {
+            DMG6220_MoveAngle(&dmg6220_t, 145, 120.0f);
+        }
         robot_task_1_state=1; //置标志位，走到任务一了
 
-        DMG6220_MoveAngle(&dmg6220_t, 145, 120.0f);
+        if(Maxi_posion_data.state == 0) //如果有有效数据的话
+        {
+            Robot_set_vx(-PIDController_Update(&robot_task1_ball_pid_t,ROBOT_TASK1_BALL_TARGET,Maxi_posion_data.x));
+        }
     }
     
     /* 任务一完成后的预留分支，目前没有需要执行的内容 */
