@@ -61,7 +61,7 @@ static uint32_t robot_task3_hostage_stable_start_tick=0;
 static uint8_t robot_task3_hostage_stable_timing=0;
 
 /* 保存小车当前状态 */
-static Robot_stage robot_now_stage=ROBOT_STAGE_TO_TASK3_STRAIGHT2; //直接从任务二结束开始调试
+static Robot_stage robot_now_stage=ROBOT_STAGE_STRAGE4; //直接从任务二结束开始调试
 
 Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
 
@@ -480,6 +480,15 @@ uint8_t Robot_is_turning(hwt101_csx *hwt101, float target_angle)
 
     return (angle_diff < ROBOT_TURNING_JUJGUE_ANGLE_DEADBAND) ? 1 : 0;
 }
+void Robot_Tower_down(void)
+{
+    Emm_position_Mode(0x06,1000,0,120000,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+}
+
+void Robot_Tower_up(void)
+{
+    Emm_position_Mode(0x06,1000,0,0,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+}
 /**
  * @brief 机器人的时钟，在主循环里面10ms调用一次
  * 
@@ -678,9 +687,19 @@ void Robot_tick(void)
                     //在目标值停留了一段时间
                     
                     Robot_set_vx(0);
-                    robot_task_1_state=2;
+                    //robot_task_1_state=2;
                     robot_time=0;
-                    robot_now_stage=ROBOT_STAGE_TASK1_DONE;
+                    robot_now_stage=ROBOT_STAGE_TASK1_EXTEND_GRIPPER;
+                    
+                    DMG6220_MoveAngle(&dmg6220_t, 139, 120.0f);
+                    HAL_Delay(10);
+                    Robot_Claw_open();
+                    HAL_Delay(10);
+                    Robot_Tower_down();
+                    HAL_Delay(10);
+                    Robot_Claw_out1();
+                   
+                    
 
                     //重置maxi的数据，防止数据干扰
                     Maxi_posion_data.state = 1;
@@ -698,7 +717,7 @@ void Robot_tick(void)
     }
     
     /* 这个地方到时候加把小球加起来放到排爆桶，然后再直行开到任务二的代码*/
-    if(0); //
+    else if(0); //
 
     /* 任务一完成后的预留分支，现在为了方便调试任务二就直行短时间然后切换到真正的任务二*/
     else if(robot_now_stage==ROBOT_STAGE_TASK1_DONE && robot_time >=ROBOT_ROAD_TIME7)
@@ -839,5 +858,13 @@ void Robot_Claw_open(void)
 
 void Robot_Claw_close(void)
 {
-    Servo_Set(35);
+    Servo_Set(42);
+}
+void Robot_Claw_out1(void)
+{
+    Emm_position_Mode(0x05,80,0,2300,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+}
+void Robot_Claw_in(void)
+{
+    Emm_position_Mode(0x05,80,0,0,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }

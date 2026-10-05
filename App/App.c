@@ -122,7 +122,7 @@ void App_Init(void)
     DMG6220_Init(&dmg6220_t, &hcan1, 0x01);
     DMG6220_Enable(&dmg6220_t);
     HAL_Delay(100);
-    DMG6220_MoveAngle(&dmg6220_t, 145, 120.0f);
+    //DMG6220_MoveAngle(&dmg6220_t, 280, 120.0f);
 
     Robot_set_move(0,0,0); //停车
 
@@ -135,7 +135,10 @@ void App_Init(void)
     HAL_UART_Receive_IT(&huart1,&usart1_rx,1); //开启串口中断接收
 
     printf("Ready\n");
-    //Maxi_Send_cmd(0x01);
+    Maxi_Send_cmd(0x01);
+
+    HAL_Delay(1000);
+    //Robot_Tower_down();
 }
 void App_Run(void)
 {
@@ -308,6 +311,22 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
         if(strcmp(sign,"high")==0)
         {
             Emm_position_Mode(0x06,100,0,data,EMM_MODE_RELATIVE_TO_PREVIOUS,EMM_SYNC_DISABLE);
+        }
+        if(strcmp(sign, "tower_down") == 0)
+        {
+            Robot_Tower_down();
+        }
+        if(strcmp(sign, "tower_up") == 0)
+        {
+            Robot_Tower_up();
+        }
+        if(strcmp(sign, "claw_out") == 0)
+        {
+            Robot_Claw_out1();
+        }
+        if(strcmp(sign, "claw_in") == 0)
+        {
+            Robot_Claw_in();
         }
     }
 }

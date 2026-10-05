@@ -21,13 +21,13 @@
 #define ROBOT_DIFF_TURN_ANGLE_DEADBAND 1.0f
 #define ROBOT_DIFF_TURN_TIMEOUT_MS 30000U
 
-#define ROBOT_QR_BACK_TIME 180 //扫二维码后退时间，单位10ms
+#define ROBOT_QR_BACK_TIME 200 //扫二维码后退时间，单位10ms
 #define ROBOT_QR_WAIT_TIME 220 //扫二维码等待时间，单位10ms
-#define ROBOT_QR_FORWARD_TIME 180 //扫二维码前进时间，单位10ms
+#define ROBOT_QR_FORWARD_TIME 200 //扫二维码前进时间，单位10ms
 #define ROBOT_OBSTACLE_TURN_WAIT_TIME 100 //穿越障碍物前转弯等待时间，单位10ms
 #define ROBOT_ROAD_TIME1 103
 #define ROBOT_ROAD_TIME2 55
-#define ROBOT_ROAD_TIME3 268
+#define ROBOT_ROAD_TIME3 265
 #define ROBOT_ROAD_TIME4 75
 #define ROBOT_ROAD_TIME5 116
 #define ROBOT_ROAD_TIME6 80
@@ -38,7 +38,7 @@
 
 
 #define ROBOT_TASK1_BALL_TARGET 134 //任务一闭环目标小球的位置
-#define ROBOT_TASK1_BALL_ERROR_TOLERANCE 2.0f //任务一位置误差容差
+#define ROBOT_TASK1_BALL_ERROR_TOLERANCE 3.0f //任务一位置误差容差
 #define ROBOT_TASK1_BALL_STABLE_TIME_MS 200U //误差持续在容差内的时间
 
 #define ROBOT_TASK2_TARGET_TARGET 300 //任务二闭环目标靶子的位置
@@ -75,6 +75,7 @@ typedef enum{
     ROBOT_STAGE_TURN4,
     ROBOT_STAGE_STRAGE4,
     ROBOT_STAGE_TASK1,
+    ROBOT_STAGE_TASK1_EXTEND_GRIPPER,
     ROBOT_STAGE_TASK1_DONE,
     ROBOT_STAGE_TASK2,
     ROBOT_STAGE_TASK2_DONE,
@@ -101,6 +102,11 @@ void Robot_remote_control(void);
 void Robot_tick(void);
 void Robot_Claw_open(void);
 void Robot_Claw_close(void);
+void Robot_Tower_down(void);
+void Robot_Tower_middle(void);
+void Robot_Tower_up(void);
+void Robot_Claw_out1(void);
+void Robot_Claw_in(void);
 uint8_t Robot_is_turning(hwt101_csx *hwt101, float target_angle);
 
 /**
