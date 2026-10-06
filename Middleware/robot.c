@@ -482,7 +482,7 @@ uint8_t Robot_is_turning(hwt101_csx *hwt101, float target_angle)
 }
 void Robot_Tower_down(void)
 {
-    Emm_position_Mode(0x06,1000,0,120000,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x06,1000,0,135000,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 
 void Robot_Tower_up(void)
@@ -716,6 +716,27 @@ void Robot_tick(void)
         }
     }
     
+    /* 夹爪伸出后等待100个节拍，然后进入夹爪闭合状态 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK1_EXTEND_GRIPPER && robot_time >= ROBOT_TASK1_EXTEND_GRIPPER_WAIT_TIME)
+    {
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_TASK1_CLOSE_GRIPPER;
+    }
+    /* 执行夹爪闭合，然后等待塔吊上升 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK1_CLOSE_GRIPPER)
+    {
+        Robot_Claw_close();
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_TASK1_TOWER_UP;
+    }
+    /* 夹爪闭合300ms后，执行塔吊上升并进入任务一完成状态 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK1_TOWER_UP && robot_time >= ROBOT_TASK1_TOWER_UP_WAIT_TIME)
+    {
+        Robot_Tower_up();
+        robot_time=0; //清零
+        robot_now_stage=255;
+    }
+
     /* 这个地方到时候加把小球加起来放到排爆桶，然后再直行开到任务二的代码*/
     else if(0); //
 
@@ -862,7 +883,7 @@ void Robot_Claw_close(void)
 }
 void Robot_Claw_out1(void)
 {
-    Emm_position_Mode(0x05,80,0,2300,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x05,80,0,1500,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 void Robot_Claw_in(void)
 {

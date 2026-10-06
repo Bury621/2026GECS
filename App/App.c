@@ -183,7 +183,7 @@ void App_Run(void)
             }
         }
             
-        printf("%d,%d\n",Maxi_posion_data.x,Maxi_posion_data.y);
+        printf("%d,%d,%d\n",Maxi_posion_data.x,Maxi_posion_data.y,Maxi_posion_data.position);
     }
     if(tim10_10ms_trigged_sign==1)
     {
