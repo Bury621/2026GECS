@@ -126,7 +126,7 @@ void App_Init(void)
 
     Robot_set_move(0,0,0); //停车
 
-    Ray_on();
+    Ray_off();
     Robot_Claw_close();
 
     //片上外设初始化

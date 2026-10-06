@@ -71,8 +71,6 @@ void Error_Handler(void);
 #define ZDT_TX_GPIO_Port GPIOB
 #define ZDT_RX_Pin GPIO_PIN_11
 #define ZDT_RX_GPIO_Port GPIOB
-#define Ray_Pin GPIO_PIN_2
-#define Ray_GPIO_Port GPIOG
 #define BTN1_Pin GPIO_PIN_3
 #define BTN1_GPIO_Port GPIOG
 #define BTN2_Pin GPIO_PIN_4
