@@ -30,7 +30,7 @@ volatile uint8_t debug_start_flag=0; //上位机发送start:1后才启动
 
 //一些变量
 volatile uint16_t robot_angle=0; //角度环的目标角度
-volatile uint16_t robot_y=22; //水平位置环的目标
+volatile uint16_t robot_y=26; //水平位置环的目标
 
 volatile uint8_t robot_y_pid_is_open=0; //是否开启水平位置环
 void App_Init(void)
@@ -126,7 +126,7 @@ void App_Init(void)
 
     Robot_set_move(0,0,0); //停车
 
-    Ray_off();
+    Ray_on();
     Robot_Claw_close();
 
     //片上外设初始化

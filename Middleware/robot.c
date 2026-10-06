@@ -64,7 +64,7 @@ static uint8_t robot_task1_back_started=0;
 static uint8_t robot_task1_dmg_started=0;
 
 /* 保存小车当前状态 */
-static Robot_stage robot_now_stage=ROBOT_STAGE_STRAGE4; //直接从任务二结束开始调试
+static Robot_stage robot_now_stage=ROBOT_STAGE_TASK1_DONE; //直接从任务二结束开始调试
 
 Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
 
@@ -76,6 +76,8 @@ extern volatile Maxi_posion_package Maxi_posion_data; //maxicam的数据
 extern PIDController robot_task1_ball_pid_t; //任务一闭环pid
 extern PIDController robot_task2_target_pid_t; //任务二闭环pid
 extern PIDController robot_task3_hostage_pid_t; //任务三闭环pid
+
+extern volatile uint8_t robot_y_pid_is_open;
 
 //任务是否完成状态，0表示没走到，1表示走到了还没完成，2表示完成了
 uint8_t robot_task_1_state=0;
@@ -805,19 +807,24 @@ void Robot_tick(void)
         DMG6220_MoveAngle(&dmg6220_t, ROBOT_TASK1_DMG_100_ANGLE, 120.0f);
         Robot_Claw_in();
         robot_time=0; //清零
-        robot_now_stage=255;
+        robot_now_stage=ROBOT_STAGE_TASK1_DMG_100_WAIT;
     }
-
-    /* 这个地方到时候加把小球加起来放到排爆桶，然后再直行开到任务二的代码*/
-    else if(0); //
+    /* DMG转到100并收爪1000ms后，再开始前往下一个地方 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK1_DMG_100_WAIT && robot_time >= ROBOT_TASK1_DMG_100_WAIT_TIME)
+    {
+        Robot_set_move(80,0,0); //前往下一个地方
+        robot_y_pid_is_open=1;
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_TASK1_DONE;
+    }
 
     /* 任务一完成后的预留分支，现在为了方便调试任务二就直行短时间然后切换到真正的任务二*/
     else if(robot_now_stage==ROBOT_STAGE_TASK1_DONE && robot_time >=ROBOT_ROAD_TIME7)
     {
-        Robot_set_vx(50); //开始运动
+        Robot_set_move(50,0,0); //开始运动
+        robot_y_pid_is_open=0;
         robot_now_stage=ROBOT_STAGE_TASK2; //切到任务二
-        //DMG6220_MoveAngle(&dmg6220_t, 100, 120.0f); //看向靶子
-        //Maxi_Send_cmd(0x02); //让摄像机拍靶子
+        Maxi_Send_cmd(0x02); //让摄像机拍靶子
         
         Maxi_posion_data.state=1;
         robot_task_2_state=1;
@@ -954,7 +961,7 @@ void Robot_Claw_close(void)
 }
 void Robot_Claw_out1(void)
 {
-    Emm_position_Mode(0x05,80,0,1500,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x05,80,0,1510,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 void Robot_Claw_out2(void)
 {
