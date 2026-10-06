@@ -58,8 +58,18 @@ typedef enum{
     ROBOT_REMOTE_TO_STOP=255
 }Robot_remote_sign;
 
-#define ROBOT_TASK1_EXTEND_GRIPPER_WAIT_TIME 500 //夹爪伸出后等待时间，单位10ms
-#define ROBOT_TASK1_TOWER_UP_WAIT_TIME 30 //夹爪闭合后等待时间，单位10ms
+#define ROBOT_TASK1_EXTEND_GRIPPER_WAIT_TIME 300 //夹爪伸出后等待时间，单位10ms
+#define ROBOT_TASK1_CLOSE_GRIPPER_WAIT_TIME 100 //夹爪闭合后等待时间，单位10ms
+#define ROBOT_TASK1_TOWER_UP_WAIT_TIME 150 //塔吊上升后等待时间，单位10ms
+#define ROBOT_TASK1_BACK_TIME1 50 //位置1的后退时间，单位10ms
+#define ROBOT_TASK1_BACK_TIME2 140 //位置2的后退时间，单位10ms
+#define ROBOT_TASK1_BACK_TIME3 110 //位置3的后退时间，单位10ms
+#define ROBOT_TASK1_BUCKET_DMG_ANGLE 280 //排爆桶上方DMG6220目标角度
+#define ROBOT_TASK1_BUCKET_DMG_WAIT_TIME 300 //DMG转到排爆桶后的等待时间，单位10ms
+#define ROBOT_TASK1_OPEN_GRIPPER_WAIT_TIME 100 //打开夹爪后等待时间，单位10ms
+#define ROBOT_TASK1_DMG_190_ANGLE 190 //关闭夹爪后的DMG6220目标角度
+#define ROBOT_TASK1_DMG_190_WAIT_TIME 50 //DMG转到190后的等待时间，单位10ms
+#define ROBOT_TASK1_DMG_100_ANGLE 100 //最后的DMG6220目标角度
 
 typedef enum{
     ROBOT_STAGE_WAIT_FOR_START=0,
@@ -80,7 +90,13 @@ typedef enum{
     ROBOT_STAGE_TASK1,
     ROBOT_STAGE_TASK1_EXTEND_GRIPPER,
     ROBOT_STAGE_TASK1_CLOSE_GRIPPER,
+    ROBOT_STAGE_TASK1_CLOSE_GRIPPER_WAIT,
     ROBOT_STAGE_TASK1_TOWER_UP,
+    ROBOT_STAGE_TASK1_BACK_BY_POSITION,
+    ROBOT_STAGE_TASK1_DMG_TO_BUCKET,
+    ROBOT_STAGE_TASK1_DMG_TO_BUCKET_WAIT,
+    ROBOT_STAGE_TASK1_OPEN_GRIPPER_WAIT,
+    ROBOT_STAGE_TASK1_DMG_190_WAIT,
     ROBOT_STAGE_TASK1_DONE,
     ROBOT_STAGE_TASK2,
     ROBOT_STAGE_TASK2_DONE,
@@ -112,6 +128,7 @@ void Robot_Tower_middle(void);
 void Robot_Tower_up(void);
 void Robot_Claw_out1(void);
 void Robot_Claw_in(void);
+void Robot_Claw_out2(void);
 uint8_t Robot_is_turning(hwt101_csx *hwt101, float target_angle);
 
 /**

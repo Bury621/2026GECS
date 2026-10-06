@@ -59,6 +59,9 @@ static uint32_t robot_task2_laser_on_start_tick=0;
 static uint8_t robot_task2_laser_on_timing=0;
 static uint32_t robot_task3_hostage_stable_start_tick=0;
 static uint8_t robot_task3_hostage_stable_timing=0;
+static uint32_t robot_task1_back_time=0;
+static uint8_t robot_task1_back_started=0;
+static uint8_t robot_task1_dmg_started=0;
 
 /* 保存小车当前状态 */
 static Robot_stage robot_now_stage=ROBOT_STAGE_STRAGE4; //直接从任务二结束开始调试
@@ -722,17 +725,85 @@ void Robot_tick(void)
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TASK1_CLOSE_GRIPPER;
     }
-    /* 执行夹爪闭合，然后等待塔吊上升 */
+    /* 执行夹爪闭合，然后等待1000ms再启动塔吊上升 */
     else if(robot_now_stage==ROBOT_STAGE_TASK1_CLOSE_GRIPPER)
     {
         Robot_Claw_close();
         robot_time=0; //清零
-        robot_now_stage=ROBOT_STAGE_TASK1_TOWER_UP;
+        robot_now_stage=ROBOT_STAGE_TASK1_CLOSE_GRIPPER_WAIT;
     }
-    /* 夹爪闭合300ms后，执行塔吊上升并进入任务一完成状态 */
-    else if(robot_now_stage==ROBOT_STAGE_TASK1_TOWER_UP && robot_time >= ROBOT_TASK1_TOWER_UP_WAIT_TIME)
+    /* 夹爪闭合1000ms后，启动塔吊上升 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK1_CLOSE_GRIPPER_WAIT && robot_time >= ROBOT_TASK1_CLOSE_GRIPPER_WAIT_TIME)
     {
         Robot_Tower_up();
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_TASK1_TOWER_UP;
+    }
+    /* 塔吊上升1000ms后，执行Claw_out2并进入后退状态 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK1_TOWER_UP && robot_time >= ROBOT_TASK1_TOWER_UP_WAIT_TIME)
+    {
+        Robot_Claw_out2();
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_TASK1_BACK_BY_POSITION;
+    }
+    /* 根据position选择后退时间，速度只设置一次，时间到停车 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK1_BACK_BY_POSITION)
+    {
+        if(robot_task1_back_started == 0)
+        {
+            if(Maxi_posion_data.position == 1)
+            {
+                robot_task1_back_time=ROBOT_TASK1_BACK_TIME1;
+            }
+            else if(Maxi_posion_data.position == 2)
+            {
+                robot_task1_back_time=ROBOT_TASK1_BACK_TIME2;
+            }
+            else if(Maxi_posion_data.position == 3)
+            {
+                robot_task1_back_time=ROBOT_TASK1_BACK_TIME3;
+            }
+
+            Robot_set_move(-30,0,0);
+            robot_time=0; //清零
+            robot_task1_back_started=1;
+        }
+        else if(robot_task1_back_started == 1 && robot_time >= robot_task1_back_time)
+        {
+            Robot_set_move(0,0,0);
+            robot_time=0; //清零
+            robot_task1_back_started=2;
+            robot_now_stage=ROBOT_STAGE_TASK1_DMG_TO_BUCKET;
+        }
+    }
+    /* 后退停车后，旋转DMG6220到排爆桶上方 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK1_DMG_TO_BUCKET && robot_task1_dmg_started == 0)
+    {
+        DMG6220_MoveAngle(&dmg6220_t, ROBOT_TASK1_BUCKET_DMG_ANGLE, 120.0f);
+        robot_task1_dmg_started=1;
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_TASK1_DMG_TO_BUCKET_WAIT;
+    }
+    /* DMG转到280后等待3000ms，再打开夹爪 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK1_DMG_TO_BUCKET_WAIT && robot_time >= ROBOT_TASK1_BUCKET_DMG_WAIT_TIME)
+    {
+        Robot_Claw_open();
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_TASK1_OPEN_GRIPPER_WAIT;
+    }
+    /* 打开夹爪1000ms后，关闭夹爪并转动DMG6220到190 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK1_OPEN_GRIPPER_WAIT && robot_time >= ROBOT_TASK1_OPEN_GRIPPER_WAIT_TIME)
+    {
+        Robot_Claw_close();
+        DMG6220_MoveAngle(&dmg6220_t, ROBOT_TASK1_DMG_190_ANGLE, 120.0f);
+        robot_time=0; //清零
+        robot_now_stage=ROBOT_STAGE_TASK1_DMG_190_WAIT;
+    }
+    /* DMG转到190后等待500ms，再转动DMG6220到100 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK1_DMG_190_WAIT && robot_time >= ROBOT_TASK1_DMG_190_WAIT_TIME)
+    {
+        DMG6220_MoveAngle(&dmg6220_t, ROBOT_TASK1_DMG_100_ANGLE, 120.0f);
+        Robot_Claw_in();
         robot_time=0; //清零
         robot_now_stage=255;
     }
@@ -745,8 +816,8 @@ void Robot_tick(void)
     {
         Robot_set_vx(50); //开始运动
         robot_now_stage=ROBOT_STAGE_TASK2; //切到任务二
-        DMG6220_MoveAngle(&dmg6220_t, 100, 120.0f); //看向靶子
-        Maxi_Send_cmd(0x02); //让摄像机拍靶子
+        //DMG6220_MoveAngle(&dmg6220_t, 100, 120.0f); //看向靶子
+        //Maxi_Send_cmd(0x02); //让摄像机拍靶子
         
         Maxi_posion_data.state=1;
         robot_task_2_state=1;
@@ -884,6 +955,10 @@ void Robot_Claw_close(void)
 void Robot_Claw_out1(void)
 {
     Emm_position_Mode(0x05,80,0,1500,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+}
+void Robot_Claw_out2(void)
+{
+    Emm_position_Mode(0x05,80,0,2850,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 void Robot_Claw_in(void)
 {
