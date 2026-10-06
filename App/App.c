@@ -139,6 +139,7 @@ void App_Init(void)
 
     HAL_Delay(1000);
     //Robot_Tower_down();
+    
 }
 void App_Run(void)
 {
@@ -183,7 +184,8 @@ void App_Run(void)
             }
         }
             
-        printf("%d,%d,%d\n",Maxi_posion_data.x,Maxi_posion_data.y,Maxi_posion_data.position);
+        //printf("%d,%d,%d\n",Maxi_posion_data.x,Maxi_posion_data.y,Maxi_posion_data.position);
+        //printf("%d\n",Emm_Read_Pulse_Count(0x01));
     }
     if(tim10_10ms_trigged_sign==1)
     {
