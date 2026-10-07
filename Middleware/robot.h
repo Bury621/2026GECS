@@ -32,7 +32,7 @@
 #define ROBOT_ROAD_TIME5 116
 #define ROBOT_ROAD_TIME6 80
 
-#define ROBOT_ROAD_TIME7 200 //从任务一到任务二那段直线的时间
+#define ROBOT_ROAD_TIME7 230 //从任务一到任务二那段直线的时间
 #define ROBOT_ROAD_TIME8 80 //完成任务二之后那个直道的时间
 #define ROBOT_ROAD_TIME9 150 //完成任务三之后前往终点的时间
 
@@ -74,6 +74,7 @@ typedef enum{
 #define ROBOT_TASK1_DMG_100_ANGLE 100 //最后的DMG6220目标角度
 #define ROBOT_TASK1_DMG_100_WAIT_TIME 200 //DMG转到100后的等待时间，单位10ms
 
+#define ROBOT_ROAD_PULSE1 17300
 typedef enum{
     ROBOT_STAGE_WAIT_FOR_START=0,
     ROBOT_STAGE_START,

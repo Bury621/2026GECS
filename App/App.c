@@ -32,7 +32,7 @@ volatile uint8_t debug_start_flag=0; //上位机发送start:1后才启动
 volatile uint16_t robot_angle=0; //角度环的目标角度
 volatile uint16_t robot_y=26; //水平位置环的目标
 
-volatile uint8_t robot_y_pid_is_open=0; //是否开启水平位置环
+volatile uint8_t robot_y_pid_is_open=1; //是否开启水平位置环
 void App_Init(void)
 {
     printf("Booting...\n");
@@ -180,12 +180,12 @@ void App_Run(void)
             else
             {
                 Robot_set_vy(PIDController_Update(&robot_y_pid_t,robot_y,now_y_data.line_error));
-                printf("%d\n",now_y_data.line_error);
+                //printf("%d\n",now_y_data.line_error);
             }
         }
             
         //printf("%d,%d,%d\n",Maxi_posion_data.x,Maxi_posion_data.y,Maxi_posion_data.position);
-        //printf("%d\n",Emm_Read_Pulse_Count(0x01));
+        printf("%d\n",Emm_Read_Pulse_Count(0x01));
     }
     if(tim10_10ms_trigged_sign==1)
     {

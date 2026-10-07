@@ -64,7 +64,7 @@ static uint8_t robot_task1_back_started=0;
 static uint8_t robot_task1_dmg_started=0;
 
 /* 保存小车当前状态 */
-static Robot_stage robot_now_stage=ROBOT_STAGE_TASK1_DONE; //直接从任务二结束开始调试
+static Robot_stage robot_now_stage=ROBOT_STAGE_TASK1_DMG_190_WAIT; //直接从任务二结束开始调试
 
 Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
 
@@ -822,6 +822,7 @@ void Robot_tick(void)
     else if(robot_now_stage==ROBOT_STAGE_TASK1_DONE && robot_time >=ROBOT_ROAD_TIME7)
     {
         Robot_set_move(50,0,0); //开始运动
+        Emm_Clear_Pulse_Count(0x01); //从这个时候开始计里程
         robot_y_pid_is_open=0;
         robot_now_stage=ROBOT_STAGE_TASK2; //切到任务二
         Maxi_Send_cmd(0x02); //让摄像机拍靶子
@@ -877,19 +878,24 @@ void Robot_tick(void)
             Ray_on();
             robot_task2_laser_on_timing=1;
             robot_task2_laser_on_start_tick=now;
+            //while(1);
         }
         else if((now-robot_task2_laser_on_start_tick) >= ROBOT_TASK2_LASER_ON_TIME_MS)
         {
             Ray_off();
             robot_task2_laser_on_timing=0;
+
+            Robot_set_move(80,0,0); //直行
             robot_now_stage=ROBOT_STAGE_TO_TASK3_STRAIGHT1;
             robot_time=0;
+
+            
         }
     }
-    else if(robot_now_stage==ROBOT_STAGE_TO_TASK3_STRAIGHT1 && robot_time >= ROBOT_ROAD_TIME8)
+    else if(robot_now_stage==ROBOT_STAGE_TO_TASK3_STRAIGHT1 && Emm_Read_Pulse_Count(0x01) >= ROBOT_ROAD_PULSE1)
     {
-        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 180.0f,25);
-
+        //Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 180.0f,25); //相对角度问题，到时候正式的换成这个
+        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 270.0f,25);
         robot_time=0;
         robot_now_stage=ROBOT_STAGE_TO_TASK3_STRAIGHT2; //切换状态
     }
