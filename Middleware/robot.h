@@ -64,7 +64,7 @@ typedef enum{
 #define ROBOT_TASK1_TOWER_UP_WAIT_TIME 150 //塔吊上升后等待时间，单位10ms
 
 #define ROBOT_TASK1_BACK_TIME1 12 //位置1的后退时间，单位10ms
-#define ROBOT_TASK1_BACK_TIME2 140 //位置2的后退时间，单位10ms
+#define ROBOT_TASK1_BACK_TIME2 137 //位置2的后退时间，单位10ms
 #define ROBOT_TASK1_BACK_TIME3 240 //位置3的后退时间，单位10ms
 
 #define ROBOT_TASK1_BUCKET_DMG_ANGLE 280 //排爆桶上方DMG6220目标角度
