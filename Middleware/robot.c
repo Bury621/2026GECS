@@ -64,7 +64,7 @@ static uint8_t robot_task1_back_started=0;
 static uint8_t robot_task1_dmg_started=0;
 
 /* 保存小车当前状态 */
-static Robot_stage robot_now_stage=ROBOT_STAGE_TASK1_DMG_190_WAIT; //直接从任务二结束开始调试
+static Robot_stage robot_now_stage=ROBOT_STAGE_WAIT_FOR_START; //直接从任务二结束开始调试
 
 Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
 
@@ -78,6 +78,7 @@ extern PIDController robot_task2_target_pid_t; //任务二闭环pid
 extern PIDController robot_task3_hostage_pid_t; //任务三闭环pid
 
 extern volatile uint8_t robot_y_pid_is_open;
+extern volatile uint16_t robot_y;
 
 //任务是否完成状态，0表示没走到，1表示走到了还没完成，2表示完成了
 uint8_t robot_task_1_state=0;
@@ -487,7 +488,7 @@ uint8_t Robot_is_turning(hwt101_csx *hwt101, float target_angle)
 }
 void Robot_Tower_down(void)
 {
-    Emm_position_Mode(0x06,1000,0,135000,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x06,1000,0,131500,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 
 void Robot_Tower_up(void)
@@ -528,6 +529,7 @@ void Robot_tick(void)
         Robot_set_move(100,0,0);
         
         robot_time=0; //清零
+        DMG6220_MoveAngle(&dmg6220_t, 280, 120.0f);
         robot_now_stage=ROBOT_STAGE_START;
     }
     /* 发车后直行ROBOT_ROAD_TIME1，随后差速转到90度 */
@@ -542,6 +544,7 @@ void Robot_tick(void)
     else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_TURN1)
     {
         Robot_set_move(100,0,0);
+        robot_y_pid_is_open=1;
         
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE1;
@@ -550,7 +553,7 @@ void Robot_tick(void)
     else if(robot_now_stage==ROBOT_STAGE_STRAGE1 && robot_time >= ROBOT_ROAD_TIME2)
     {
         Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 0.0f,25);
-        //robot_angle=0; //旋转
+        robot_y_pid_is_open=0;
 
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_THROUGH_OBSTACLE; //切换到穿过障碍物状态
@@ -563,11 +566,6 @@ void Robot_tick(void)
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_THROUGH_OBSTACLE_WAIT;
     }
-    /* 穿越障碍物前等待时间未到：持续保持停车 */
-    // else if(robot_now_stage==ROBOT_STAGE_THROUGH_OBSTACLE_WAIT && robot_time < ROBOT_OBSTACLE_TURN_WAIT_TIME)
-    // {
-    //     Robot_set_move(0,0,0);
-    // }
     /* 等待时间到：前进穿越障碍物，随后进入下一段直行计时 */
     else if(robot_now_stage==ROBOT_STAGE_THROUGH_OBSTACLE_WAIT && robot_time >= ROBOT_OBSTACLE_TURN_WAIT_TIME)
     {
@@ -594,6 +592,7 @@ void Robot_tick(void)
         Robot_set_move(-100,0,0);
         
         robot_time=0; //清零
+        robot_y_pid_is_open=1;
         robot_now_stage=ROBOT_STAGE_SCAN_QR;
     }
     /* 扫描二维码后退时间结束：停车等待二维码处理 */
@@ -602,13 +601,16 @@ void Robot_tick(void)
         Robot_set_move(0,0,0);
 
         robot_time=0; //清零
+        robot_y_pid_is_open=0;
         robot_now_stage=ROBOT_STAGE_QR_WAIT;
+        
     }
     /* 二维码等待时间结束：开始向前行驶 */
     else if(robot_now_stage==ROBOT_STAGE_QR_WAIT && robot_time >= ROBOT_QR_WAIT_TIME)
     {
         Robot_set_move(100,0,0);
 
+        robot_y_pid_is_open=1;
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_QR_FORWARD;
     }
@@ -616,6 +618,8 @@ void Robot_tick(void)
     else if(robot_now_stage==ROBOT_STAGE_QR_FORWARD && robot_time >= ROBOT_QR_FORWARD_TIME)
     {
         Robot_set_move(100,0,0);
+
+        //robot_y_pid_is_open=0;
 
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TURN3;
@@ -625,8 +629,10 @@ void Robot_tick(void)
     {
         // Robot_set_move(0,0,0);
         // robot_angle=0; //旋转
+        robot_y_pid_is_open=0;
         Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 0.0f,25);
         robot_time=0; //清零
+        robot_y_pid_is_open=0;
         robot_now_stage=ROBOT_STAGE_STRAGE3;
     }
     /* 差速转弯完成：开始下一段直行 */
@@ -636,6 +642,7 @@ void Robot_tick(void)
         
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TURN4;
+        
     }
     /* 下一段直行结束：差速转到270度 */
     else if(robot_now_stage==ROBOT_STAGE_TURN4 && robot_time >= ROBOT_ROAD_TIME5) //if里面写的是什么，这里干的就是什么事情
@@ -654,6 +661,8 @@ void Robot_tick(void)
         Robot_set_move(50,0,0);
         
         robot_time=0; //清零
+        robot_y_pid_is_open=1;
+        //robot_y=22;
         robot_now_stage=ROBOT_STAGE_TASK1;
 
         DMG6220_MoveAngle(&dmg6220_t, 190, 120.0f);
