@@ -28,7 +28,7 @@
 #define ROBOT_ROAD_TIME1 98
 #define ROBOT_ROAD_TIME2 48
 #define ROBOT_ROAD_TIME3 263
-#define ROBOT_ROAD_TIME4 82
+#define ROBOT_ROAD_TIME4 87
 #define ROBOT_ROAD_TIME5 116
 #define ROBOT_ROAD_TIME6 80
 
@@ -40,6 +40,7 @@
 #define ROBOT_TASK1_BALL_TARGET 134 //任务一闭环目标小球的位置
 #define ROBOT_TASK1_BALL_ERROR_TOLERANCE 3.0f //任务一位置误差容差
 #define ROBOT_TASK1_BALL_STABLE_TIME_MS 200U //误差持续在容差内的时间
+#define ROBOT_TASK1_MAXI_CMD_DELAY_MS 500U //进入任务一后延迟发送视觉命令的时间
 
 #define ROBOT_TASK2_TARGET_TARGET 300 //任务二闭环目标靶子的位置
 #define ROBOT_TASK2_TARGET_ERROR_TOLERANCE 2.0f //任务二位置误差容差

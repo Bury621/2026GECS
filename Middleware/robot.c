@@ -53,6 +53,8 @@ static uint32_t robot_time=0; //用来计时的变量
 static uint32_t robot_last_tick=0;
 static uint32_t robot_task1_ball_stable_start_tick=0;
 static uint8_t robot_task1_ball_stable_timing=0;
+static uint32_t robot_task1_maxi_cmd_start_tick=0;
+static uint8_t robot_task1_maxi_cmd_started=0;
 static uint32_t robot_task2_target_stable_start_tick=0;
 static uint8_t robot_task2_target_stable_timing=0;
 static uint32_t robot_task2_laser_on_start_tick=0;
@@ -666,7 +668,8 @@ void Robot_tick(void)
         robot_now_stage=ROBOT_STAGE_TASK1;
 
         DMG6220_MoveAngle(&dmg6220_t, 190, 120.0f);
-        Maxi_Send_cmd(0x01);
+        robot_task1_maxi_cmd_start_tick=now;
+        robot_task1_maxi_cmd_started=0;
         //HAL_Delay(4);
         //Emm_position_Mode(0x06,-100,0,5000,EMM_MODE_RELATIVE_TO_PREVIOUS,EMM_SYNC_DISABLE);
     }
@@ -674,6 +677,13 @@ void Robot_tick(void)
     else if(robot_now_stage==ROBOT_STAGE_TASK1)
     {
         //Robot_set_move(0,0,0);
+
+        if(!robot_task1_maxi_cmd_started &&
+           (now-robot_task1_maxi_cmd_start_tick)>=ROBOT_TASK1_MAXI_CMD_DELAY_MS)
+        {
+            Maxi_Send_cmd(0x01);
+            robot_task1_maxi_cmd_started=1;
+        }
 
         robot_time=0; //清零
         if(robot_task_1_state == 0)
@@ -747,6 +757,7 @@ void Robot_tick(void)
     else if(robot_now_stage==ROBOT_STAGE_TASK1_CLOSE_GRIPPER_WAIT && robot_time >= ROBOT_TASK1_CLOSE_GRIPPER_WAIT_TIME)
     {
         Robot_Tower_up();
+        HAL_Delay(4);
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TASK1_TOWER_UP;
     }
@@ -903,8 +914,8 @@ void Robot_tick(void)
     }
     else if(robot_now_stage==ROBOT_STAGE_TO_TASK3_STRAIGHT1 && Emm_Read_Pulse_Count(0x01) >= ROBOT_ROAD_PULSE1)
     {
-        //Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 180.0f,25); //相对角度问题，到时候正式的换成这个
-        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 270.0f,25);
+        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 180.0f,25); //相对角度问题，到时候正式的换成这个
+        //Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 270.0f,25);
         robot_time=0;
         robot_now_stage=ROBOT_STAGE_TO_TASK3_STRAIGHT2; //切换状态
     }
