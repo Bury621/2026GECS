@@ -84,7 +84,9 @@ typedef enum{
 #define ROBOT_TASK1_DMG_100_ANGLE 100 //最后的DMG6220目标角度
 #define ROBOT_TASK1_DMG_100_WAIT_TIME 200 //DMG转到100后的等待时间，单位10ms
 
-#define ROBOT_ROAD_PULSE1 15000
+#define ROBOT_ROAD_PULSE1 15000 //任务二结束的第一条直道的计里程
+#define ROBOT_ROAD_PULSE2 15000 //任务二结束的第二条直道的计里程
+
 typedef enum{
     ROBOT_STAGE_WAIT_FOR_START=0,
     ROBOT_STAGE_START,

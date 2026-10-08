@@ -922,6 +922,8 @@ void Robot_tick(void)
     //转弯完成了
     else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_TO_TASK3_STRAIGHT2)
     {
+        Emm_Clear_Pulse_Count(0x01); //清零里程
+        
         Robot_set_move(50,0,0); //慢速直行
         robot_y_pid_is_open=1;
         DMG6220_MoveAngle(&dmg6220_t, 145, 120.0f);
@@ -973,7 +975,7 @@ void Robot_tick(void)
             robot_task3_hostage_stable_timing=0;
         }
     }
-    //稳定后先短距离前进，补偿夹爪位置，任务三尚未完成
+    //稳定后先短距离前进，补偿夹爪位置
     else if(robot_now_stage==ROBOT_STAGE_TASK3_OFFSET_FORWARD && robot_task3_offset_started == 0)
     {
         Robot_set_move(30,0,0); //往前一点补偿夹爪位置
@@ -1019,8 +1021,8 @@ void Robot_tick(void)
         robot_time=0;
         robot_now_stage=ROBOT_STAGE_TASK3_TO_END;
     }
-    /* 前往终点时间到，停车并结束任务 */
-    else if(robot_now_stage==ROBOT_STAGE_TASK3_TO_END && robot_time >= ROBOT_ROAD_TO_END_TIME)
+    /* 前往终点里程到，停车并结束任务 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK3_TO_END && Emm_Read_Pulse_Count(0x01) >= ROBOT_ROAD_PULSE2)
     {
         Robot_set_move(0,0,0);
         robot_now_stage=ROBOT_STAGE_END;

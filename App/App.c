@@ -196,6 +196,7 @@ void App_Init(void)
     printf("Ready\n");
 
     //Robot_Tower_down();
+    Maxi_Send_cmd(0x03);
     
 }
 void App_Run(void)
