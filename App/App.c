@@ -22,6 +22,23 @@ static volatile float robot_diff_turn_target_angle_deg = 0.0f;
 static volatile uint8_t robot_diff_turn_start_request = 0;
 static volatile uint8_t robot_diff_turn_stop_request = 0;
 
+static volatile uint8_t btn2_pressed;
+static uint8_t countdown;
+static uint32_t countdown_tick;
+static const char *countdown_text[] = {"GO", "1", "2", "3"};
+
+static void Button_ShortRelease(uint8_t btn_code);
+static uint8_t Button_ReadPin(const uint32_t *port, const uint32_t pin);
+
+static btn_instance_t btn2 = {
+    .port = (const uint32_t *)BTN2_GPIO_Port, .pin = BTN2_Pin,
+};
+
+static btn_init_t button_init = {
+    .process_time_ms = 10, .debounce_time_ms = 20,
+    .port_read = Button_ReadPin, .short_release = Button_ShortRelease,
+};
+
 //标志位
 extern Robot_remote_sign remote_sign; //小车遥控标志位
 volatile uint8_t tim7_100ms_trigged_sign=0; //角度环更新标志位
@@ -33,6 +50,42 @@ volatile uint16_t robot_angle=0; //角度环的目标角度
 volatile uint16_t robot_y=26; //水平位置环的目标
 
 volatile uint8_t robot_y_pid_is_open=0; //是否开启水平位置环
+
+static void Oled_ShowText(const char *text)
+{
+    uint8_t width = (uint8_t)(strlen(text) * Font_16x26.FontWidth);
+
+    ssd1306_Fill(Black);
+    ssd1306_SetCursor((SSD1306_WIDTH - width) / 2,
+                      (SSD1306_HEIGHT - Font_16x26.FontHeight) / 2);
+    ssd1306_WriteString(text, Font_16x26, White);
+    ssd1306_UpdateScreen(&hi2c2);
+}
+
+static void Countdown_Update(void)
+{
+    if (btn2_pressed) {
+        btn2_pressed = 0;
+        if (!countdown && !debug_start_flag) {
+            countdown = 3;
+            countdown_tick = HAL_GetTick();
+            Oled_ShowText(countdown_text[countdown]);
+        }
+    }
+
+    if (countdown && HAL_GetTick() - countdown_tick >= 1000) {
+        countdown_tick = HAL_GetTick();
+        countdown--;
+        Oled_ShowText(countdown_text[countdown]);
+        if (!countdown) debug_start_flag = 1;
+    }
+}
+
+static void Button_ShortRelease(uint8_t btn_code) { (void)btn_code; btn2_pressed = 1; }
+
+static uint8_t Button_ReadPin(const uint32_t *port, const uint32_t pin)
+{ return (uint8_t)!HAL_GPIO_ReadPin((GPIO_TypeDef *)port, (uint16_t)pin); }
+
 void App_Init(void)
 {
     printf("Booting...\n");
@@ -113,6 +166,8 @@ void App_Init(void)
     ssd1306_WriteString("Bury666",Font_16x26,White);
     ssd1306_UpdateScreen(&hi2c2);
 
+    Button_Init(&button_init, &btn2, 1);
+
     hwt101_Init(&hwt101_t,&huart2);
     HAL_Delay(100);
     hwt101_reset_yaw(&hwt101_t);
@@ -141,6 +196,8 @@ void App_Init(void)
 }
 void App_Run(void)
 {
+    Countdown_Update();
+
     DMG6220_Update(&dmg6220_t);
     DMG6220_Service(&dmg6220_t);
 
@@ -157,6 +214,7 @@ void App_Run(void)
     }
 
     Robot_remote_control(); //处理遥控
+
     if(tim7_100ms_trigged_sign==1) //动态更新角度
     {
         tim7_100ms_trigged_sign=0;
@@ -372,6 +430,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     }
     if(htim->Instance==TIM10)
     {
+        Button_Update();
         tim10_10ms_trigged_sign=1;
     }
 }

@@ -917,13 +917,15 @@ void Robot_tick(void)
         Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 180.0f,25); //相对角度问题，到时候正式的换成这个
         //Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 270.0f,25);
         robot_time=0;
+        robot_y_pid_is_open=0;
         robot_now_stage=ROBOT_STAGE_TO_TASK3_STRAIGHT2; //切换状态
     }
     //转弯完成了
     else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_TO_TASK3_STRAIGHT2)
     {
         Robot_set_move(50,0,0); //慢速直行
-        DMG6220_MoveAngle(&dmg6220_t, 100, 120.0f);
+        robot_y_pid_is_open=1;
+        DMG6220_MoveAngle(&dmg6220_t, 145, 120.0f);
 
         robot_time=0;
         robot_now_stage=ROBOT_STAGE_TASK3; //切换状态
