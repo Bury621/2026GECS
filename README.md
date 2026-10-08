@@ -364,12 +364,12 @@ flowchart TD
 
 ### 完整任务状态机
 
-> 当前源码把初始阶段设置为 `ROBOT_STAGE_TASK1_DONE`，因此发送 `start:1` 后实际会先走“任务二 -> 任务三 -> 终点”的调试链路。若要从发车开始执行完整赛程，需要先将 `Middleware/robot.c` 中的静态初始值改为 `ROBOT_STAGE_WAIT_FOR_START`。
+> 当前源码把初始阶段设置为 `ROBOT_STAGE_TASK3_OFFSET_FORWARD`，适合手动完成任务三对准后，直接从夹爪位置补偿和后续抓取流程开始调试。若要从发车开始执行完整赛程，需要先将 `Middleware/robot.c` 中的静态初始值改为 `ROBOT_STAGE_WAIT_FOR_START`。
 
 ```mermaid
 flowchart TD
     ENTRY{"robot_now_stage 初始值"} -->|"完整赛程 WAIT_FOR_START"| WAIT["WAIT_FOR_START<br/>等待 start 标志"]
-    ENTRY -->|"当前源码默认 TASK1_DONE"| TASK1_DONE
+    ENTRY -->|"当前调试起点 TASK3_OFFSET_FORWARD"| TASK3_OFFSET
 
     WAIT -->|"首个 10ms tick"| START["START<br/>vx 为 100，开始发车直行"]
     START -->|"robot_time 达到 103"| TURN1["TURN1<br/>差速转弯到 90°"]
@@ -405,7 +405,8 @@ flowchart TD
     STRAIGHT1 -->|"robot_time 达到 80"| STRAIGHT2["TO_TASK3_STRAIGHT2<br/>差速转弯到 180°"]
     STRAIGHT2 -->|"转弯完成"| TASK3["TASK3<br/>vx 为 50，DMG 到 100°<br/>MaxiCam 命令 0x03"]
     TASK3 -->|"误差小于 2，稳定 200ms"| TASK3_OFFSET["TASK3_OFFSET_FORWARD<br/>vx 为 30，短距离补偿夹爪位置"]
-    TASK3_OFFSET -->|"robot_time 达到 150"| OUT3_WAIT["TASK3_CLAW_OUT3_WAIT<br/>停车并执行 Claw_out3<br/>等待 150"]
+    TASK3_OFFSET -->|"robot_time 达到 140"| DMG_145_WAIT["TASK3_DMG_145_WAIT<br/>停车，DMG 到 145°<br/>等待 100"]
+    DMG_145_WAIT -->|"robot_time 达到 100"| OUT3_WAIT["TASK3_CLAW_OUT3_WAIT<br/>执行 Claw_out3<br/>等待 150"]
     OUT3_WAIT -->|"robot_time 达到 150"| TASK3_CLOSE["TASK3_CLOSE_GRIPPER_WAIT<br/>闭合夹爪<br/>等待 100"]
     TASK3_CLOSE -->|"robot_time 达到 100"| TASK3_IN["TASK3_CLAW_IN_WAIT<br/>收回夹爪<br/>等待 100"]
     TASK3_IN -->|"robot_time 达到 100"| TASK3_TO_END["TASK3_TO_END<br/>DMG 到 190°，vx 为 80 前往终点"]

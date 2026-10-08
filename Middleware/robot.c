@@ -61,12 +61,13 @@ static uint32_t robot_task2_laser_on_start_tick=0;
 static uint8_t robot_task2_laser_on_timing=0;
 static uint32_t robot_task3_hostage_stable_start_tick=0;
 static uint8_t robot_task3_hostage_stable_timing=0;
+static uint8_t robot_task3_offset_started=0;
 static uint32_t robot_task1_back_time=0;
 static uint8_t robot_task1_back_started=0;
 static uint8_t robot_task1_dmg_started=0;
 
 /* 保存小车当前状态 */
-static Robot_stage robot_now_stage=ROBOT_STAGE_WAIT_FOR_START; //直接从任务二结束开始调试
+static Robot_stage robot_now_stage=ROBOT_STAGE_TASK3_OFFSET_FORWARD; //调试：手动对准后直接从补偿前进开始
 
 Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
 
@@ -954,7 +955,7 @@ void Robot_tick(void)
                 }
                 else if((now-robot_task3_hostage_stable_start_tick) >= ROBOT_TASK3_HOSTAGE_STABLE_TIME_MS)
                 {
-                    Robot_set_move(30,0,0); //往前一点补偿误差
+                    robot_task3_offset_started=0;
                     robot_time=0; //清零时间
                     robot_now_stage=ROBOT_STAGE_TASK3_OFFSET_FORWARD;
 
@@ -973,9 +974,24 @@ void Robot_tick(void)
         }
     }
     //稳定后先短距离前进，补偿夹爪位置，任务三尚未完成
+    else if(robot_now_stage==ROBOT_STAGE_TASK3_OFFSET_FORWARD && robot_task3_offset_started == 0)
+    {
+        Robot_set_move(30,0,0); //往前一点补偿夹爪位置
+        robot_y_pid_is_open=0;
+        robot_time=0;
+        Maxi_posion_data.state=1;
+        robot_task3_offset_started=1;
+    }
     else if(robot_now_stage==ROBOT_STAGE_TASK3_OFFSET_FORWARD && robot_time >= ROBOT_ROAD_HOSTAGE_OFFSET_TIME)
     {
         Robot_set_move(0,0,0);
+        DMG6220_MoveAngle(&dmg6220_t, ROBOT_TASK3_DMG_145_ANGLE, 120.0f);
+        robot_time=0;
+        robot_now_stage=ROBOT_STAGE_TASK3_DMG_145_WAIT;
+    }
+    /* DMG转到145度并等待后，再伸出夹爪 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK3_DMG_145_WAIT && robot_time >= ROBOT_TASK3_DMG_145_WAIT_TIME)
+    {
         Robot_Claw_out3();
         robot_time=0;
         robot_now_stage=ROBOT_STAGE_TASK3_CLAW_OUT3_WAIT;
@@ -1030,7 +1046,7 @@ void Robot_Claw_out2(void)
 }
 void Robot_Claw_out3(void)
 {
-    Emm_position_Mode(0x05,80,0,500,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x05,80,0,800,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 void Robot_Claw_in(void)
 {

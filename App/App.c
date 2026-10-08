@@ -182,7 +182,11 @@ void App_Init(void)
     Robot_set_move(0,0,0); //停车
 
     Ray_off();
-    Robot_Claw_close();
+
+    //Robot_Claw_close();
+
+    Robot_Claw_open();
+    DMG6220_MoveAngle(&dmg6220_t, 155, 120.0f);
 
     //片上外设初始化
     HAL_TIM_Base_Start_IT(&htim7); //开启tim7
