@@ -404,8 +404,12 @@ flowchart TD
     TASK2_DONE -->|"激光时间到"| STRAIGHT1["TO_TASK3_STRAIGHT1<br/>关闭激光并直行"]
     STRAIGHT1 -->|"robot_time 达到 80"| STRAIGHT2["TO_TASK3_STRAIGHT2<br/>差速转弯到 180°"]
     STRAIGHT2 -->|"转弯完成"| TASK3["TASK3<br/>vx 为 50，DMG 到 100°<br/>MaxiCam 命令 0x03"]
-    TASK3 -->|"误差小于 2，稳定 200ms"| TASK3_DONE["TASK3_DONE<br/>vx 为 80，前往终点"]
-    TASK3_DONE -->|"robot_time 达到 150"| FINISH["END<br/>停车结束"]
+    TASK3 -->|"误差小于 2，稳定 200ms"| TASK3_OFFSET["TASK3_OFFSET_FORWARD<br/>vx 为 30，短距离补偿夹爪位置"]
+    TASK3_OFFSET -->|"robot_time 达到 150"| OUT3_WAIT["TASK3_CLAW_OUT3_WAIT<br/>停车并执行 Claw_out3<br/>等待 150"]
+    OUT3_WAIT -->|"robot_time 达到 150"| TASK3_CLOSE["TASK3_CLOSE_GRIPPER_WAIT<br/>闭合夹爪<br/>等待 100"]
+    TASK3_CLOSE -->|"robot_time 达到 100"| TASK3_IN["TASK3_CLAW_IN_WAIT<br/>收回夹爪<br/>等待 100"]
+    TASK3_IN -->|"robot_time 达到 100"| TASK3_TO_END["TASK3_TO_END<br/>DMG 到 190°，vx 为 80 前往终点"]
+    TASK3_TO_END -->|"robot_time 达到 150"| FINISH["END<br/>停车结束"]
 ```
 
 状态机由 `Robot_tick()` 以 10ms 周期推进。差速转弯运行期间 `Robot_tick()` 会清零 `robot_time` 并直接返回，因此转弯耗时不会计入后续直线段的计时。

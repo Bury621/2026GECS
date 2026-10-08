@@ -34,7 +34,7 @@
 
 #define ROBOT_ROAD_TIME7 230 //从任务一到任务二那段直线的时间
 #define ROBOT_ROAD_TIME8 80 //完成任务二之后那个直道的时间
-#define ROBOT_ROAD_TIME9 150 //完成任务三之后前往终点的时间
+
 
 
 #define ROBOT_TASK1_BALL_TARGET 134 //任务一闭环目标小球的位置
@@ -50,6 +50,13 @@
 #define ROBOT_TASK3_HOSTAGE_TARGET 300 //任务三闭环人质的位置
 #define ROBOT_TASK3_HOSTAGE_ERROR_TOLERANCE 2.0f //任务三人质位置误差容差
 #define ROBOT_TASK3_HOSTAGE_STABLE_TIME_MS 200U //任务三误差持续在容差内的时间
+
+#define ROBOT_ROAD_HOSTAGE_OFFSET_TIME 150 //任务三补偿时间
+#define ROBOT_TASK3_OUT3_WAIT_TIME 150 //夹爪伸出后等待时间，单位10ms
+#define ROBOT_TASK3_CLOSE_GRIPPER_WAIT_TIME 100 //夹爪闭合后等待时间，单位10ms
+#define ROBOT_TASK3_CLAW_IN_WAIT_TIME 100 //夹爪收回后等待时间，单位10ms
+#define ROBOT_TASK3_DMG_190_ANGLE 190 //任务三最后的DMG6220目标角度
+#define ROBOT_ROAD_TO_END_TIME 150 //夹取完成后前往终点的时间，单位10ms
 typedef enum{
     ROBOT_REMOTE_STOP=0,
     ROBOT_REMOTE_FORWARD,
@@ -109,7 +116,11 @@ typedef enum{
     ROBOT_STAGE_TO_TASK3_STRAIGHT1,
     ROBOT_STAGE_TO_TASK3_STRAIGHT2,
     ROBOT_STAGE_TASK3,
-    ROBOT_STAGE_TASK3_DONE,
+    ROBOT_STAGE_TASK3_OFFSET_FORWARD,
+    ROBOT_STAGE_TASK3_CLAW_OUT3_WAIT,
+    ROBOT_STAGE_TASK3_CLOSE_GRIPPER_WAIT,
+    ROBOT_STAGE_TASK3_CLAW_IN_WAIT,
+    ROBOT_STAGE_TASK3_TO_END,
     ROBOT_STAGE_END
 }Robot_stage;
 
@@ -135,6 +146,7 @@ void Robot_Tower_up(void);
 void Robot_Claw_out1(void);
 void Robot_Claw_in(void);
 void Robot_Claw_out2(void);
+void Robot_Claw_out3(void);
 uint8_t Robot_is_turning(hwt101_csx *hwt101, float target_angle);
 
 /**

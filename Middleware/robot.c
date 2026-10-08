@@ -954,10 +954,9 @@ void Robot_tick(void)
                 }
                 else if((now-robot_task3_hostage_stable_start_tick) >= ROBOT_TASK3_HOSTAGE_STABLE_TIME_MS)
                 {
-                    Robot_set_move(80,0,0); //设置指定的速度，前往终点
-                    robot_task_3_state=2;
+                    Robot_set_move(30,0,0); //往前一点补偿误差
                     robot_time=0; //清零时间
-                    robot_now_stage=ROBOT_STAGE_TASK3_DONE;
+                    robot_now_stage=ROBOT_STAGE_TASK3_OFFSET_FORWARD;
 
                     //重置maxi的数据，防止数据干扰
                     Maxi_posion_data.state=1;
@@ -973,11 +972,42 @@ void Robot_tick(void)
             robot_task3_hostage_stable_timing=0;
         }
     }
-    //前往终点
-    else if(robot_now_stage==ROBOT_STAGE_TASK3_DONE && robot_time >= ROBOT_ROAD_TIME9)
+    //稳定后先短距离前进，补偿夹爪位置，任务三尚未完成
+    else if(robot_now_stage==ROBOT_STAGE_TASK3_OFFSET_FORWARD && robot_time >= ROBOT_ROAD_HOSTAGE_OFFSET_TIME)
     {
-        Robot_set_move(0,0,0); //停在终点
-        robot_now_stage=ROBOT_STAGE_END; //切换到结束状态
+        Robot_set_move(0,0,0);
+        Robot_Claw_out3();
+        robot_time=0;
+        robot_now_stage=ROBOT_STAGE_TASK3_CLAW_OUT3_WAIT;
+    }
+    /* 第三段伸出到位后闭合夹爪 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK3_CLAW_OUT3_WAIT && robot_time >= ROBOT_TASK3_OUT3_WAIT_TIME)
+    {
+        Robot_Claw_close();
+        robot_time=0;
+        robot_now_stage=ROBOT_STAGE_TASK3_CLOSE_GRIPPER_WAIT;
+    }
+    /* 夹爪闭合后等待，再收回夹爪 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK3_CLOSE_GRIPPER_WAIT && robot_time >= ROBOT_TASK3_CLOSE_GRIPPER_WAIT_TIME)
+    {
+        Robot_Claw_in();
+        robot_time=0;
+        robot_now_stage=ROBOT_STAGE_TASK3_CLAW_IN_WAIT;
+    }
+    /* 夹爪收回后等待，再把DMG转到190度并前往终点 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK3_CLAW_IN_WAIT && robot_time >= ROBOT_TASK3_CLAW_IN_WAIT_TIME)
+    {
+        DMG6220_MoveAngle(&dmg6220_t, ROBOT_TASK3_DMG_190_ANGLE, 120.0f);
+        robot_task_3_state=2;
+        Robot_set_move(80,0,0);
+        robot_time=0;
+        robot_now_stage=ROBOT_STAGE_TASK3_TO_END;
+    }
+    /* 前往终点时间到，停车并结束任务 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK3_TO_END && robot_time >= ROBOT_ROAD_TO_END_TIME)
+    {
+        Robot_set_move(0,0,0);
+        robot_now_stage=ROBOT_STAGE_END;
     }
 }
 
@@ -997,6 +1027,10 @@ void Robot_Claw_out1(void)
 void Robot_Claw_out2(void)
 {
     Emm_position_Mode(0x05,80,0,2850,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+}
+void Robot_Claw_out3(void)
+{
+    Emm_position_Mode(0x05,80,0,500,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 void Robot_Claw_in(void)
 {
