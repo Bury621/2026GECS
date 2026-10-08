@@ -832,7 +832,7 @@ void Robot_tick(void)
     /* DMG转到100并收爪1000ms后，再开始前往下一个地方 */
     else if(robot_now_stage==ROBOT_STAGE_TASK1_DMG_100_WAIT && robot_time >= ROBOT_TASK1_DMG_100_WAIT_TIME)
     {
-        Robot_set_move(80,0,0); //前往下一个地方
+        Robot_set_move(100,0,0); //前往下一个地方
         robot_y_pid_is_open=1;
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TASK1_DONE;
@@ -908,8 +908,6 @@ void Robot_tick(void)
             Robot_set_move(80,0,0); //直行
             robot_now_stage=ROBOT_STAGE_TO_TASK3_STRAIGHT1;
             robot_time=0;
-
-            
         }
     }
     else if(robot_now_stage==ROBOT_STAGE_TO_TASK3_STRAIGHT1 && Emm_Read_Pulse_Count(0x01) >= ROBOT_ROAD_PULSE1)
@@ -936,6 +934,11 @@ void Robot_tick(void)
     }
     else if(robot_now_stage==ROBOT_STAGE_TASK3)
     {
+        if(robot_time >= 1000)
+        {
+            robot_y_pid_is_open=0;
+        }
+
         if(Maxi_posion_data.state==0)
         {
             float hostage_error=(float)ROBOT_TASK3_HOSTAGE_TARGET-(float)Maxi_posion_data.x;

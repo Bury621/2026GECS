@@ -22,7 +22,7 @@
 #define ROBOT_DIFF_TURN_TIMEOUT_MS 30000U
 
 #define ROBOT_QR_BACK_TIME 200 //扫二维码后退时间，单位10ms
-#define ROBOT_QR_WAIT_TIME 400 //扫二维码等待时间，单位10ms
+#define ROBOT_QR_WAIT_TIME 150 //扫二维码等待时间，单位10ms
 #define ROBOT_QR_FORWARD_TIME 200 //扫二维码前进时间，单位10ms
 #define ROBOT_OBSTACLE_TURN_WAIT_TIME 100 //穿越障碍物前转弯等待时间，单位10ms
 #define ROBOT_ROAD_TIME1 98
@@ -63,7 +63,7 @@ typedef enum{
 #define ROBOT_TASK1_CLOSE_GRIPPER_WAIT_TIME 100 //夹爪闭合后等待时间，单位10ms
 #define ROBOT_TASK1_TOWER_UP_WAIT_TIME 150 //塔吊上升后等待时间，单位10ms
 
-#define ROBOT_TASK1_BACK_TIME1 12 //位置1的后退时间，单位10ms
+#define ROBOT_TASK1_BACK_TIME1 9 //位置1的后退时间，单位10ms
 #define ROBOT_TASK1_BACK_TIME2 137 //位置2的后退时间，单位10ms
 #define ROBOT_TASK1_BACK_TIME3 240 //位置3的后退时间，单位10ms
 
@@ -75,7 +75,7 @@ typedef enum{
 #define ROBOT_TASK1_DMG_100_ANGLE 100 //最后的DMG6220目标角度
 #define ROBOT_TASK1_DMG_100_WAIT_TIME 200 //DMG转到100后的等待时间，单位10ms
 
-#define ROBOT_ROAD_PULSE1 17500
+#define ROBOT_ROAD_PULSE1 15000
 typedef enum{
     ROBOT_STAGE_WAIT_FOR_START=0,
     ROBOT_STAGE_START,
