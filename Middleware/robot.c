@@ -67,7 +67,7 @@ static uint8_t robot_task1_back_started=0;
 static uint8_t robot_task1_dmg_started=0;
 
 /* 保存小车当前状态 */
-static Robot_stage robot_now_stage=ROBOT_STAGE_TASK3_OFFSET_FORWARD; //调试：手动对准后直接从补偿前进开始
+static Robot_stage robot_now_stage=ROBOT_STAGE_WAIT_FOR_START; //完整赛程：发送start后从发车开始
 
 Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
 
@@ -985,12 +985,12 @@ void Robot_tick(void)
     else if(robot_now_stage==ROBOT_STAGE_TASK3_OFFSET_FORWARD && robot_time >= ROBOT_ROAD_HOSTAGE_OFFSET_TIME)
     {
         Robot_set_move(0,0,0);
-        DMG6220_MoveAngle(&dmg6220_t, ROBOT_TASK3_DMG_145_ANGLE, 120.0f);
+        DMG6220_MoveAngle(&dmg6220_t, ROBOT_TASK3_DMG_125_ANGLE, 120.0f);
         robot_time=0;
-        robot_now_stage=ROBOT_STAGE_TASK3_DMG_145_WAIT;
+        robot_now_stage=ROBOT_STAGE_TASK3_DMG_125_WAIT;
     }
-    /* DMG转到145度并等待后，再伸出夹爪 */
-    else if(robot_now_stage==ROBOT_STAGE_TASK3_DMG_145_WAIT && robot_time >= ROBOT_TASK3_DMG_145_WAIT_TIME)
+    /* DMG转到125度并等待后，再伸出夹爪 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK3_DMG_125_WAIT && robot_time >= ROBOT_TASK3_DMG_125_WAIT_TIME)
     {
         Robot_Claw_out3();
         robot_time=0;
