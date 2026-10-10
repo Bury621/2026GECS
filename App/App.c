@@ -183,10 +183,10 @@ void App_Init(void)
 
     Ray_off();
 
-    //Robot_Claw_close();
+    Robot_Claw_close();
 
-    Robot_Claw_open();
-    DMG6220_MoveAngle(&dmg6220_t, 155, 120.0f);
+    //Robot_Claw_open();
+    //DMG6220_MoveAngle(&dmg6220_t, 155, 120.0f);
 
     //片上外设初始化
     HAL_TIM_Base_Start_IT(&htim7); //开启tim7
@@ -196,7 +196,7 @@ void App_Init(void)
     printf("Ready\n");
 
     //Robot_Tower_down();
-    Maxi_Send_cmd(0x03);
+    //Maxi_Send_cmd(0x03);
     
 }
 void App_Run(void)
@@ -245,7 +245,7 @@ void App_Run(void)
             }
         }
             
-        printf("%d,%d,%d\n",Maxi_posion_data.x,Maxi_posion_data.y,Maxi_posion_data.position);
+        //printf("%d,%d,%d\n",Maxi_posion_data.x,Maxi_posion_data.y,Maxi_posion_data.position);
         //printf("%d\n",Emm_Read_Pulse_Count(0x01));
     }
     if(tim10_10ms_trigged_sign==1)

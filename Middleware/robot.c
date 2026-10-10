@@ -924,9 +924,10 @@ void Robot_tick(void)
     {
         Emm_Clear_Pulse_Count(0x01); //清零里程
         
-        Robot_set_move(50,0,0); //慢速直行
+        Robot_set_move(20,0,0); //慢速直行
         robot_y_pid_is_open=1;
         DMG6220_MoveAngle(&dmg6220_t, 145, 120.0f);
+        Robot_Claw_open(); //打开夹爪
 
         robot_time=0;
         robot_now_stage=ROBOT_STAGE_TASK3; //切换状态
@@ -1040,7 +1041,7 @@ void Robot_Claw_close(void)
 }
 void Robot_Claw_out1(void)
 {
-    Emm_position_Mode(0x05,80,0,1510,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x05,80,0,1540,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 void Robot_Claw_out2(void)
 {
