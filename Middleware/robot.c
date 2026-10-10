@@ -68,6 +68,7 @@ static uint8_t robot_task1_dmg_started=0;
 
 /* 保存小车当前状态 */
 static Robot_stage robot_now_stage=ROBOT_STAGE_WAIT_FOR_START; //完整赛程：发送start后从发车开始
+//static Robot_stage robot_now_stage=ROBOT_STAGE_TO_TASK3_STRAIGHT2;
 
 Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
 
@@ -924,7 +925,7 @@ void Robot_tick(void)
     {
         Emm_Clear_Pulse_Count(0x01); //清零里程
         
-        Robot_set_move(20,0,0); //慢速直行
+        Robot_set_move(30,0,0); //慢速直行
         robot_y_pid_is_open=1;
         DMG6220_MoveAngle(&dmg6220_t, 145, 120.0f);
         Robot_Claw_open(); //打开夹爪
@@ -1041,7 +1042,7 @@ void Robot_Claw_close(void)
 }
 void Robot_Claw_out1(void)
 {
-    Emm_position_Mode(0x05,80,0,1540,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x05,80,0,1600,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 void Robot_Claw_out2(void)
 {
@@ -1049,7 +1050,7 @@ void Robot_Claw_out2(void)
 }
 void Robot_Claw_out3(void)
 {
-    Emm_position_Mode(0x05,80,0,800,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x05,80,0,450,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 void Robot_Claw_in(void)
 {

@@ -47,12 +47,12 @@
 #define ROBOT_TASK2_TARGET_STABLE_TIME_MS 200U //任务二误差持续在容差内的时间
 #define ROBOT_TASK2_LASER_ON_TIME_MS 2000U //任务二激光打开持续时间
 
-#define ROBOT_TASK3_HOSTAGE_TARGET 300 //任务三闭环人质的位置
-#define ROBOT_TASK3_HOSTAGE_ERROR_TOLERANCE 2.0f //任务三人质位置误差容差
+#define ROBOT_TASK3_HOSTAGE_TARGET 400 //任务三闭环人质的位置
+#define ROBOT_TASK3_HOSTAGE_ERROR_TOLERANCE 4.0f //任务三人质位置误差容差
 #define ROBOT_TASK3_HOSTAGE_STABLE_TIME_MS 200U //任务三误差持续在容差内的时间
 
 #define ROBOT_ROAD_HOSTAGE_OFFSET_TIME 50 //任务三补偿时间
-#define ROBOT_TASK3_DMG_125_ANGLE 125 //伸出夹爪前将DMG转到125度
+#define ROBOT_TASK3_DMG_125_ANGLE 130 //伸出夹爪前将DMG转到125度
 #define ROBOT_TASK3_DMG_125_WAIT_TIME 100 //DMG转到125度后的等待时间，单位10ms
 #define ROBOT_TASK3_OUT3_WAIT_TIME 150 //夹爪伸出后等待时间，单位10ms
 #define ROBOT_TASK3_CLOSE_GRIPPER_WAIT_TIME 100 //夹爪闭合后等待时间，单位10ms
@@ -85,7 +85,7 @@ typedef enum{
 #define ROBOT_TASK1_DMG_100_WAIT_TIME 200 //DMG转到100后的等待时间，单位10ms
 
 #define ROBOT_ROAD_PULSE1 15000 //任务二结束的第一条直道的计里程
-#define ROBOT_ROAD_PULSE2 15000 //任务二结束的第二条直道的计里程
+#define ROBOT_ROAD_PULSE2 32300 //任务二结束的第二条直道的计里程
 
 typedef enum{
     ROBOT_STAGE_WAIT_FOR_START=0,
