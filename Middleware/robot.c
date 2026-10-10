@@ -717,6 +717,7 @@ void Robot_tick(void)
                     robot_time=0;
                     robot_now_stage=ROBOT_STAGE_TASK1_EXTEND_GRIPPER;
                     
+                    robot_y_pid_is_open=0; //防止阴影影响
                     DMG6220_MoveAngle(&dmg6220_t, 139, 120.0f);
                     HAL_Delay(10);
                     Robot_Claw_open();
@@ -758,6 +759,7 @@ void Robot_tick(void)
     /* 夹爪闭合1000ms后，启动塔吊上升 */
     else if(robot_now_stage==ROBOT_STAGE_TASK1_CLOSE_GRIPPER_WAIT && robot_time >= ROBOT_TASK1_CLOSE_GRIPPER_WAIT_TIME)
     {
+        
         Robot_Tower_up();
         HAL_Delay(4);
         robot_time=0; //清零
@@ -1050,7 +1052,7 @@ void Robot_Claw_out2(void)
 }
 void Robot_Claw_out3(void)
 {
-    Emm_position_Mode(0x05,80,0,450,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x05,80,0,0,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 void Robot_Claw_in(void)
 {

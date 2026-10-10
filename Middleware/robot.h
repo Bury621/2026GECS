@@ -21,9 +21,9 @@
 #define ROBOT_DIFF_TURN_ANGLE_DEADBAND 1.0f
 #define ROBOT_DIFF_TURN_TIMEOUT_MS 30000U
 
-#define ROBOT_QR_BACK_TIME 200 //扫二维码后退时间，单位10ms
+#define ROBOT_QR_BACK_TIME 185 //扫二维码后退时间，单位10ms
 #define ROBOT_QR_WAIT_TIME 150 //扫二维码等待时间，单位10ms
-#define ROBOT_QR_FORWARD_TIME 200 //扫二维码前进时间，单位10ms
+#define ROBOT_QR_FORWARD_TIME 185 //扫二维码前进时间，单位10ms
 #define ROBOT_OBSTACLE_TURN_WAIT_TIME 100 //穿越障碍物前转弯等待时间，单位10ms
 #define ROBOT_ROAD_TIME1 98
 #define ROBOT_ROAD_TIME2 48
@@ -52,8 +52,8 @@
 #define ROBOT_TASK3_HOSTAGE_STABLE_TIME_MS 200U //任务三误差持续在容差内的时间
 
 #define ROBOT_ROAD_HOSTAGE_OFFSET_TIME 50 //任务三补偿时间
-#define ROBOT_TASK3_DMG_125_ANGLE 130 //伸出夹爪前将DMG转到125度
-#define ROBOT_TASK3_DMG_125_WAIT_TIME 100 //DMG转到125度后的等待时间，单位10ms
+#define ROBOT_TASK3_DMG_125_ANGLE 120 //伸出夹爪前将DMG转到125度
+#define ROBOT_TASK3_DMG_125_WAIT_TIME 135 //DMG转到125度后的等待时间，单位10ms
 #define ROBOT_TASK3_OUT3_WAIT_TIME 150 //夹爪伸出后等待时间，单位10ms
 #define ROBOT_TASK3_CLOSE_GRIPPER_WAIT_TIME 100 //夹爪闭合后等待时间，单位10ms
 #define ROBOT_TASK3_CLAW_IN_WAIT_TIME 100 //夹爪收回后等待时间，单位10ms
