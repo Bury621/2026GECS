@@ -113,10 +113,10 @@ void App_Init(void)
     robot_angle_pid_t.T=0.1f;
 
     PIDController_Init(&robot_y_pid_t);
-    robot_y_pid_t.Kp=1.2f;
+    robot_y_pid_t.Kp=0.5f;
     robot_y_pid_t.Ki=0.0f;
     robot_y_pid_t.Kd=0.0f;
-    robot_y_pid_t.tau=0.05f;
+    robot_y_pid_t.tau=1.0f;
     robot_y_pid_t.deadband=2;
     robot_y_pid_t.limMin=-1000.0f;
     robot_y_pid_t.limMax=1000.0f;
@@ -236,16 +236,16 @@ void App_Run(void)
             if(now_y_data.turning_state)
             {
                 Robot_set_vy(0);
-
             }
             else
             {
                 Robot_set_vy(PIDController_Update(&robot_y_pid_t,robot_y,now_y_data.line_error));
-                //printf("%d\n",now_y_data.line_error);
+                
             }
+            printf("%d\n",now_y_data.line_error);
         }
             
-        printf("%d,%d,%d\n",Maxi_posion_data.x,Maxi_posion_data.y,Maxi_posion_data.position);
+        //printf("%d,%d,%d\n",Maxi_posion_data.x,Maxi_posion_data.y,Maxi_posion_data.position);
         //printf("%d\n",Emm_Read_Pulse_Count(0x01));
     }
     if(tim10_10ms_trigged_sign==1)
