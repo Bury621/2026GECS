@@ -62,6 +62,7 @@ static uint8_t robot_task2_laser_on_timing=0;
 static uint32_t robot_task3_hostage_stable_start_tick=0;
 static uint8_t robot_task3_hostage_stable_timing=0;
 static uint8_t robot_task3_offset_started=0;
+static uint8_t robot_task3_dmg_235_started=0;
 static uint32_t robot_task1_back_time=0;
 static uint8_t robot_task1_back_started=0;
 static uint8_t robot_task1_dmg_started=0;
@@ -1054,7 +1055,16 @@ void Robot_tick(void)
         Robot_set_move(80,0,0);
         robot_y_pid_is_open=1;
         robot_time=0;
+        robot_task3_dmg_235_started=0;
         robot_now_stage=ROBOT_STAGE_TASK3_TO_END;
+    }
+    /* 前往终点500ms后，将DMG6220转到235度 */
+    else if(robot_now_stage==ROBOT_STAGE_TASK3_TO_END &&
+            !robot_task3_dmg_235_started &&
+            robot_time >= ROBOT_TASK3_TO_END_DMG_235_DELAY_TIME)
+    {
+        DMG6220_MoveAngle(&dmg6220_t, ROBOT_TASK3_TO_END_DMG_235_ANGLE, 120.0f);
+        robot_task3_dmg_235_started=1;
     }
     /* 前往终点里程到，停车并结束任务 */
     else if(robot_now_stage==ROBOT_STAGE_TASK3_TO_END && Emm_Read_Forward_Pulse_Count() >= ROBOT_ROAD_PULSE2)

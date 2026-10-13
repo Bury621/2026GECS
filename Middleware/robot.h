@@ -57,6 +57,8 @@
 #define ROBOT_TASK3_CLOSE_GRIPPER_WAIT_TIME 100 //夹爪闭合后等待时间，单位10ms
 #define ROBOT_TASK3_CLAW_IN_WAIT_TIME 100 //夹爪收回后等待时间，单位10ms
 #define ROBOT_TASK3_DMG_190_ANGLE 190 //任务三最后的DMG6220目标角度
+#define ROBOT_TASK3_TO_END_DMG_235_ANGLE 235 //前往终点后DMG6220目标角度
+#define ROBOT_TASK3_TO_END_DMG_235_DELAY_TIME 50 //进入前往终点状态后的等待时间，单位10ms
 #define ROBOT_ROAD_TO_END_TIME 150 //夹取完成后前往终点的时间，单位10ms
 typedef enum{
     ROBOT_REMOTE_STOP=0,
