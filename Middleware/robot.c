@@ -902,6 +902,7 @@ void Robot_tick(void)
                     robot_task_2_state=2;
                     robot_now_stage=ROBOT_STAGE_TASK2_DONE;
                     robot_time=0;
+                    robot_y_pid_is_open=1;
 
                     //重置maxi的数据，防止数据干扰
                     Maxi_posion_data.state=1;
@@ -952,6 +953,7 @@ void Robot_tick(void)
         
         Robot_set_move(30,0,0); //慢速直行
         robot_y_pid_is_open=1;
+        robot_y=32;
         DMG6220_MoveAngle(&dmg6220_t, 145, 120.0f);
         Robot_Claw_open(); //打开夹爪
 
@@ -964,10 +966,10 @@ void Robot_tick(void)
     }
     else if(robot_now_stage==ROBOT_STAGE_TASK3)
     {
-        if(robot_time >= 1000)
-        {
-            robot_y_pid_is_open=0;
-        }
+        // if(robot_time >= 1000)
+        // {
+        //     robot_y_pid_is_open=0;
+        // }
 
         if(Maxi_posion_data.state==0)
         {
@@ -1045,6 +1047,7 @@ void Robot_tick(void)
         DMG6220_MoveAngle(&dmg6220_t, ROBOT_TASK3_DMG_190_ANGLE, 120.0f);
         robot_task_3_state=2;
         Robot_set_move(80,0,0);
+        robot_y_pid_is_open=1;
         robot_time=0;
         robot_now_stage=ROBOT_STAGE_TASK3_TO_END;
     }
@@ -1052,6 +1055,7 @@ void Robot_tick(void)
     else if(robot_now_stage==ROBOT_STAGE_TASK3_TO_END && Emm_Read_Pulse_Count(0x01) >= ROBOT_ROAD_PULSE2)
     {
         Robot_set_move(0,0,0);
+        robot_y_pid_is_open=0;
         robot_now_stage=ROBOT_STAGE_END;
     }
 }
@@ -1067,7 +1071,7 @@ void Robot_Claw_close(void)
 }
 void Robot_Claw_out1(void)
 {
-    Emm_position_Mode(0x05,80,0,1610,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x05,80,0,1580,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 void Robot_Claw_out2(void)
 {
