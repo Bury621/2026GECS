@@ -26,10 +26,10 @@
 #define ROBOT_QR_FORWARD_TIME 185 //扫二维码前进时间，单位10ms
 #define ROBOT_OBSTACLE_TURN_WAIT_TIME 100 //穿越障碍物前转弯等待时间，单位10ms
 #define ROBOT_Y_ALIGN_TIME 100 //差速转弯后的横向闭环时间，单位10ms
-#define ROBOT_ROAD_TIME1 97
-#define ROBOT_ROAD_TIME2 52
+#define ROBOT_ROAD_TIME1 103
+#define ROBOT_ROAD_TIME2 54
 #define ROBOT_ROAD_TIME3 188
-#define ROBOT_ROAD_TIME4 83
+#define ROBOT_ROAD_TIME4 79
 #define ROBOT_ROAD_TIME5 116
 #define ROBOT_ROAD_TIME6 80
 

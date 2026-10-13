@@ -391,6 +391,10 @@ void VOFA_Get_Package_Callback(vofamanager_csx *csx,char *sign,float data)
         {
             Robot_Claw_in();
         }
+        if(strcmp(sign, "ypid") == 0)
+        {
+            robot_y_pid_is_open=!robot_y_pid_is_open;
+        }
     }
 }
 //喂调试数据
