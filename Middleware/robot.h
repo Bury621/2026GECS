@@ -53,9 +53,9 @@
 #define ROBOT_ROAD_HOSTAGE_OFFSET_TIME 50 //任务三补偿时间
 #define ROBOT_TASK3_DMG_125_ANGLE 110 //伸出夹爪前将DMG转到125度
 #define ROBOT_TASK3_DMG_125_WAIT_TIME 135 //DMG转到125度后的等待时间，单位10ms
-#define ROBOT_TASK3_OUT3_WAIT_TIME 150 //夹爪伸出后等待时间，单位10ms
-#define ROBOT_TASK3_CLOSE_GRIPPER_WAIT_TIME 100 //夹爪闭合后等待时间，单位10ms
-#define ROBOT_TASK3_CLAW_IN_WAIT_TIME 100 //夹爪收回后等待时间，单位10ms
+#define ROBOT_TASK3_OUT3_WAIT_TIME 50 //夹爪伸出后等待时间，单位10ms
+#define ROBOT_TASK3_CLOSE_GRIPPER_WAIT_TIME 50 //夹爪闭合后等待时间，单位10ms
+#define ROBOT_TASK3_CLAW_IN_WAIT_TIME 50 //夹爪收回后等待时间，单位10ms
 #define ROBOT_TASK3_DMG_190_ANGLE 190 //任务三最后的DMG6220目标角度
 #define ROBOT_TASK3_TO_END_DMG_235_ANGLE 235 //前往终点后DMG6220目标角度
 #define ROBOT_TASK3_TO_END_DMG_235_DELAY_TIME 50 //进入前往终点状态后的等待时间，单位10ms
@@ -83,10 +83,10 @@ typedef enum{
 #define ROBOT_TASK1_DMG_190_ANGLE 190 //关闭夹爪后的DMG6220目标角度
 #define ROBOT_TASK1_DMG_190_WAIT_TIME 80 //DMG转到190后的等待时间，单位10ms
 #define ROBOT_TASK1_DMG_100_ANGLE 100 //最后的DMG6220目标角度
-#define ROBOT_TASK1_DMG_100_WAIT_TIME 200 //DMG转到100后的等待时间，单位10ms
+#define ROBOT_TASK1_DMG_100_WAIT_TIME 60 //DMG转到100后的等待时间，单位10ms
 
 #define ROBOT_ROAD_PULSE1 15000 //任务二结束的第一条直道的计里程
-#define ROBOT_ROAD_PULSE2 32000 //任务二结束的第二条直道的计里程
+#define ROBOT_ROAD_PULSE2 32300 //任务二结束的第二条直道的计里程
 
 typedef enum{
     ROBOT_STAGE_WAIT_FOR_START=0,
