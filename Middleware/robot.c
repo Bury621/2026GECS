@@ -573,7 +573,7 @@ void Robot_tick(void)
     /* 等待时间到：前进穿越障碍物，随后进入下一段直行计时 */
     else if(robot_now_stage==ROBOT_STAGE_THROUGH_OBSTACLE_WAIT && robot_time >= ROBOT_OBSTACLE_TURN_WAIT_TIME)
     {
-        Robot_set_move(50,0,0);
+        Robot_set_move(70,0,0);
 
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TURN2;
@@ -645,6 +645,7 @@ void Robot_tick(void)
         Robot_set_move(100,0,0);
         
         robot_time=0; //清零
+        robot_y_pid_is_open=1;
         robot_now_stage=ROBOT_STAGE_TURN4;
         
     }
@@ -655,6 +656,7 @@ void Robot_tick(void)
         //robot_angle=270; //旋转
 
         Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 270.0f,25);
+        robot_y_pid_is_open=0;
 
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE4;
@@ -718,12 +720,14 @@ void Robot_tick(void)
                     robot_now_stage=ROBOT_STAGE_TASK1_EXTEND_GRIPPER;
                     
                     robot_y_pid_is_open=0; //防止阴影影响
+                    Robot_set_vy(0);
+
                     DMG6220_MoveAngle(&dmg6220_t, 139, 120.0f);
-                    HAL_Delay(10);
+                    HAL_Delay(4);
                     Robot_Claw_open();
-                    HAL_Delay(10);
+                    HAL_Delay(4);
                     Robot_Tower_down();
-                    HAL_Delay(10);
+                    HAL_Delay(4);
                     Robot_Claw_out1();
                    
                     
