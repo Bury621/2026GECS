@@ -26,6 +26,7 @@
 #define ROBOT_QR_FORWARD_TIME 185 //扫二维码前进时间，单位10ms
 #define ROBOT_OBSTACLE_TURN_WAIT_TIME 100 //穿越障碍物前转弯等待时间，单位10ms
 #define ROBOT_Y_ALIGN_TIME 100 //差速转弯后的横向闭环时间，单位10ms
+#define ROBOT_STRAGE3_STOP_WAIT_TIME 50 //STRAGE3差速转弯结束后停车等待时间，单位10ms
 #define ROBOT_ROAD_TIME1 97
 #define ROBOT_ROAD_TIME2 54
 #define ROBOT_ROAD_TIME3 188
@@ -83,7 +84,7 @@ typedef enum{
 #define ROBOT_TASK1_DMG_190_ANGLE 190 //关闭夹爪后的DMG6220目标角度
 #define ROBOT_TASK1_DMG_190_WAIT_TIME 80 //DMG转到190后的等待时间，单位10ms
 #define ROBOT_TASK1_DMG_100_ANGLE 100 //最后的DMG6220目标角度
-#define ROBOT_TASK1_DMG_100_WAIT_TIME 60 //DMG转到100后的等待时间，单位10ms
+#define ROBOT_TASK1_DMG_100_WAIT_TIME 200 //DMG转到100后的等待时间，单位10ms
 
 #define ROBOT_ROAD_PULSE1 15000 //任务二结束的第一条直道的计里程
 #define ROBOT_ROAD_PULSE2 32300 //任务二结束的第二条直道的计里程
@@ -103,6 +104,7 @@ typedef enum{
     ROBOT_STAGE_STRAGE2,
     ROBOT_STAGE_TURN3,
     ROBOT_STAGE_STRAGE3,
+    ROBOT_STAGE_STRAGE3_WAIT,
     ROBOT_STAGE_STRAGE3_Y_ALIGN,
     ROBOT_STAGE_TURN4,
     ROBOT_STAGE_STRAGE4,

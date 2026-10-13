@@ -654,15 +654,23 @@ void Robot_tick(void)
         robot_y_pid_is_open=0;
         robot_now_stage=ROBOT_STAGE_STRAGE3;
     }
-    /* 差速转弯完成：先进行1000ms横向闭环，再开始下一段直行 */
+    /* 差速转弯完成：先停车等待500ms，不开启横向闭环 */
     else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_STRAGE3)
+    {
+        Robot_set_move(0,0,0);
+
+        robot_time=0; //清零
+        robot_y_pid_is_open=0;
+        robot_now_stage=ROBOT_STAGE_STRAGE3_WAIT;
+    }
+    /* 停车等待时间到：开启1000ms横向闭环，再开始下一段直行 */
+    else if(robot_now_stage==ROBOT_STAGE_STRAGE3_WAIT && robot_time >= ROBOT_STRAGE3_STOP_WAIT_TIME)
     {
         Robot_set_move(0,0,0);
 
         robot_time=0; //清零
         robot_y_pid_is_open=1;
         robot_now_stage=ROBOT_STAGE_STRAGE3_Y_ALIGN;
-
     }
     /* 差速转弯后的横向闭环时间到：开始下一段直行 */
     else if(robot_now_stage==ROBOT_STAGE_STRAGE3_Y_ALIGN && robot_time >= ROBOT_Y_ALIGN_TIME)
