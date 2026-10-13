@@ -113,7 +113,7 @@ void App_Init(void)
     robot_angle_pid_t.T=0.1f;
 
     PIDController_Init(&robot_y_pid_t);
-    robot_y_pid_t.Kp=0.5f;
+    robot_y_pid_t.Kp=0.25f;
     robot_y_pid_t.Ki=0.0f;
     robot_y_pid_t.Kd=0.0f;
     robot_y_pid_t.tau=1.0f;
@@ -196,7 +196,7 @@ void App_Init(void)
     printf("Ready\n");
 
     //Robot_Tower_down();
-    //Maxi_Send_cmd(0x03);
+    //Maxi_Send_cmd(0x01);
     
 }
 void App_Run(void)
@@ -242,10 +242,10 @@ void App_Run(void)
                 Robot_set_vy(PIDController_Update(&robot_y_pid_t,robot_y,now_y_data.line_error));
                 
             }
-            //printf("%d\n",now_y_data.line_error);
+            printf("%d\n",now_y_data.line_error);
         }
             
-        printf("%d,%d,%d\n",Maxi_posion_data.x,Maxi_posion_data.y,Maxi_posion_data.position);
+        //printf("%d,%d,%d\n",Maxi_posion_data.x,Maxi_posion_data.y,Maxi_posion_data.position);
         //printf("%d\n",Emm_Read_Pulse_Count(0x01));
     }
     if(tim10_10ms_trigged_sign==1)

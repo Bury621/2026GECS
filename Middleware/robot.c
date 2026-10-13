@@ -583,13 +583,15 @@ void Robot_tick(void)
         Robot_set_move(0,0,0);
 
         robot_time=0; //清零
+        robot_y_pid_is_open=1;
         robot_now_stage=ROBOT_STAGE_THROUGH_OBSTACLE_WAIT;
     }
     /* 等待时间到：前进穿越障碍物，随后进入下一段直行计时 */
     else if(robot_now_stage==ROBOT_STAGE_THROUGH_OBSTACLE_WAIT && robot_time >= ROBOT_OBSTACLE_TURN_WAIT_TIME)
     {
         Robot_set_move(70,0,0);
-
+        robot_y_pid_is_open=0;
+        Robot_set_vy(0);
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TURN2;
     }
@@ -660,13 +662,13 @@ void Robot_tick(void)
         Robot_set_move(0,0,0);
 
         robot_time=0; //清零
-        robot_y_pid_is_open=0;
+        robot_y_pid_is_open=1;
         robot_now_stage=ROBOT_STAGE_STRAGE3_WAIT;
     }
     /* 停车等待时间到：开启1000ms横向闭环，再开始下一段直行 */
     else if(robot_now_stage==ROBOT_STAGE_STRAGE3_WAIT && robot_time >= ROBOT_STRAGE3_STOP_WAIT_TIME)
     {
-        Robot_set_move(0,0,0);
+        //Robot_set_move(0,0,0);
 
         robot_time=0; //清零
         robot_y_pid_is_open=1;
@@ -939,12 +941,15 @@ void Robot_tick(void)
         {
             Ray_on();
             robot_task2_laser_on_timing=1;
+            robot_y_pid_is_open=0;
+            Robot_set_vy(0);
             robot_task2_laser_on_start_tick=now;
             //while(1);
         }
         else if((now-robot_task2_laser_on_start_tick) >= ROBOT_TASK2_LASER_ON_TIME_MS)
         {
             Ray_off();
+            robot_y_pid_is_open=1;
             robot_task2_laser_on_timing=0;
 
             Robot_set_move(80,0,0); //直行
