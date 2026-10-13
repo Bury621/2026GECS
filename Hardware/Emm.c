@@ -11,6 +11,34 @@ static uint32_t emm_last_tick[256] = {0};
 static uint8_t emm_speed_valid[256] = {0};
 static uint8_t emm_speed_pending[256] = {0};
 
+/* 纵向里程只累计 vx，不包含 vy 和 omega。 */
+static int64_t emm_forward_pulse_numerator = 0;
+static int64_t emm_forward_pulse_offset_numerator = 0;
+static int32_t emm_active_forward_speed = 0;
+static int32_t emm_pending_forward_speed = 0;
+static uint32_t emm_forward_last_tick = 0;
+static uint8_t emm_forward_speed_valid = 0;
+static uint8_t emm_forward_speed_pending = 0;
+
+static void Emm_Update_Forward_Pulse_Count(uint32_t now)
+{
+    uint32_t elapsed = 0;
+
+    if (!emm_forward_speed_valid)
+    {
+        emm_forward_last_tick = now;
+        return;
+    }
+
+    elapsed = now - emm_forward_last_tick;
+    if (elapsed != 0)
+    {
+        emm_forward_pulse_numerator += (int64_t)emm_active_forward_speed *
+                                       EMM_PULSES_PER_REV * elapsed;
+        emm_forward_last_tick = now;
+    }
+}
+
 static void Emm_Update_Pulse_Count(uint8_t addr, uint32_t now)
 {
     uint32_t elapsed = 0;
@@ -109,6 +137,38 @@ void Emm_Clear_Pulse_Count(uint8_t addr)
     emm_pulse_offset_numerator[addr] = emm_pulse_numerator[addr];
 }
 
+void Emm_Set_Forward_Speed(int32_t speed, EMM_SYNC_SIGN sync)
+{
+    uint32_t now = HAL_GetTick();
+
+    if (sync == EMM_SYNC_ENABLE)
+    {
+        emm_pending_forward_speed = speed;
+        emm_forward_speed_pending = 1;
+    }
+    else
+    {
+        Emm_Update_Forward_Pulse_Count(now);
+        emm_active_forward_speed = speed;
+        emm_forward_speed_valid = 1;
+        emm_forward_speed_pending = 0;
+    }
+}
+
+int32_t Emm_Read_Forward_Pulse_Count(void)
+{
+    Emm_Update_Forward_Pulse_Count(HAL_GetTick());
+    return (int32_t)((emm_forward_pulse_numerator -
+                      emm_forward_pulse_offset_numerator) /
+                     EMM_RPM_MS_DIVISOR);
+}
+
+void Emm_Clear_Forward_Pulse_Count(void)
+{
+    Emm_Update_Forward_Pulse_Count(HAL_GetTick());
+    emm_forward_pulse_offset_numerator = emm_forward_pulse_numerator;
+}
+
 void Emm_Stop(uint8_t addr)
 {
     uint8_t command[5] = {addr, 0xFE, 0x98, 0x00, 0x6B};
@@ -139,5 +199,13 @@ void Emm_Sync_Trig(void)
             emm_speed_valid[addr] = 1;
             emm_speed_pending[addr] = 0;
         }
+    }
+
+    if (emm_forward_speed_pending)
+    {
+        Emm_Update_Forward_Pulse_Count(now);
+        emm_active_forward_speed = emm_pending_forward_speed;
+        emm_forward_speed_valid = 1;
+        emm_forward_speed_pending = 0;
     }
 }

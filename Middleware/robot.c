@@ -96,6 +96,7 @@ static void Robot_update_move(void)
     int32_t w2 = (int32_t)robot_vx - robot_vy + robot_omega;   /* 右前 */
     int32_t w3 = (int32_t)robot_vx - robot_vy - robot_omega;   /* 左后 */
     int32_t w4 = (int32_t)robot_vx + robot_vy + robot_omega;   /* 右后 */
+    int32_t forward_speed = robot_vx;
 
     /* 四个轮子的原始值 */
     int32_t raw[4] = { w1, w2, w3, w4 };
@@ -112,7 +113,11 @@ static void Robot_update_move(void)
         for (int i = 0; i < 4; i++) {
             raw[i] = (int32_t)((int64_t)raw[i] * WHEEL_MAX_SPEED / max_abs);
         }
+        forward_speed = (int32_t)((int64_t)forward_speed * WHEEL_MAX_SPEED / max_abs);
     }
+
+    /* 里程只跟前后运动有关，横向闭环的 vy 和转向 omega 都不计入。 */
+    Emm_Set_Forward_Speed(forward_speed, EMM_SYNC_ENABLE);
 
     /* 应用方向修正 */
     for (int i = 0; i < 4; i++) {
@@ -869,7 +874,7 @@ void Robot_tick(void)
     else if(robot_now_stage==ROBOT_STAGE_TASK1_DONE && robot_time >=ROBOT_ROAD_TIME7)
     {
         Robot_set_move(50,0,0); //开始运动
-        Emm_Clear_Pulse_Count(0x01); //从这个时候开始计里程
+        Emm_Clear_Forward_Pulse_Count(); //从这个时候开始计纵向里程
         robot_y_pid_is_open=0;
         robot_now_stage=ROBOT_STAGE_TASK2; //切到任务二
         Maxi_Send_cmd(0x02); //让摄像机拍靶子
@@ -938,7 +943,7 @@ void Robot_tick(void)
             robot_time=0;
         }
     }
-    else if(robot_now_stage==ROBOT_STAGE_TO_TASK3_STRAIGHT1 && Emm_Read_Pulse_Count(0x01) >= ROBOT_ROAD_PULSE1)
+    else if(robot_now_stage==ROBOT_STAGE_TO_TASK3_STRAIGHT1 && Emm_Read_Forward_Pulse_Count() >= ROBOT_ROAD_PULSE1)
     {
         Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 180.0f,25); //相对角度问题，到时候正式的换成这个
         //Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 270.0f,25);
@@ -949,7 +954,7 @@ void Robot_tick(void)
     //转弯完成了
     else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_TO_TASK3_STRAIGHT2)
     {
-        Emm_Clear_Pulse_Count(0x01); //清零里程
+        Emm_Clear_Forward_Pulse_Count(); //清零纵向里程
         
         Robot_set_move(30,0,0); //慢速直行
         robot_y_pid_is_open=1;
@@ -1052,11 +1057,13 @@ void Robot_tick(void)
         robot_now_stage=ROBOT_STAGE_TASK3_TO_END;
     }
     /* 前往终点里程到，停车并结束任务 */
-    else if(robot_now_stage==ROBOT_STAGE_TASK3_TO_END && Emm_Read_Pulse_Count(0x01) >= ROBOT_ROAD_PULSE2)
+    else if(robot_now_stage==ROBOT_STAGE_TASK3_TO_END && Emm_Read_Forward_Pulse_Count() >= ROBOT_ROAD_PULSE2)
     {
+        
         Robot_set_move(0,0,0);
         robot_y_pid_is_open=0;
         robot_now_stage=ROBOT_STAGE_END;
+        printf("end\n");
     }
 }
 
