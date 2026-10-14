@@ -55,8 +55,6 @@ static uint32_t robot_task1_ball_stable_start_tick=0;
 static uint8_t robot_task1_ball_stable_timing=0;
 static uint32_t robot_task1_maxi_cmd_start_tick=0;
 static uint8_t robot_task1_maxi_cmd_started=0;
-static uint32_t robot_task1_y_pid_start_tick=0;
-static uint8_t robot_task1_y_pid_started=0;
 static uint32_t robot_task2_target_stable_start_tick=0;
 static uint8_t robot_task2_target_stable_timing=0;
 static uint32_t robot_task2_laser_on_start_tick=0;
@@ -661,7 +659,7 @@ void Robot_tick(void)
     /* 差速转弯完成：先前进ROBOT_ROAD_TIME4的一半，不开启横向闭环 */
     else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_STRAGE3)
     {
-        Robot_set_move(100,0,0);
+        Robot_set_move(50,0,0);
 
         robot_time=0; //清零
         robot_y_pid_is_open=0;
@@ -705,15 +703,13 @@ void Robot_tick(void)
         Robot_set_move(50,0,0);
         
         robot_time=0; //清零
-        robot_y_pid_is_open=0;
+        robot_y_pid_is_open=1;
         //robot_y=22;
         robot_now_stage=ROBOT_STAGE_TASK1;
 
         DMG6220_MoveAngle(&dmg6220_t, 190, 120.0f);
         robot_task1_maxi_cmd_start_tick=now;
         robot_task1_maxi_cmd_started=0;
-        robot_task1_y_pid_start_tick=now;
-        robot_task1_y_pid_started=0;
         //HAL_Delay(4);
         //Emm_position_Mode(0x06,-100,0,5000,EMM_MODE_RELATIVE_TO_PREVIOUS,EMM_SYNC_DISABLE);
     }
@@ -721,13 +717,6 @@ void Robot_tick(void)
     else if(robot_now_stage==ROBOT_STAGE_TASK1)
     {
         //Robot_set_move(0,0,0);
-
-        if(!robot_task1_y_pid_started &&
-           (now-robot_task1_y_pid_start_tick)>=ROBOT_TASK1_Y_PID_DELAY_MS)
-        {
-            robot_y_pid_is_open=1;
-            robot_task1_y_pid_started=1;
-        }
 
         if(!robot_task1_maxi_cmd_started &&
            (now-robot_task1_maxi_cmd_start_tick)>=ROBOT_TASK1_MAXI_CMD_DELAY_MS)
@@ -1121,7 +1110,7 @@ void Robot_Claw_out2(void)
 }
 void Robot_Claw_out3(void)
 {
-    Emm_position_Mode(0x05,80,0,20,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x05,80,0,30,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 void Robot_Claw_in(void)
 {
