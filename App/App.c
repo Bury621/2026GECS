@@ -113,8 +113,8 @@ void App_Init(void)
     robot_angle_pid_t.T=0.1f;
 
     PIDController_Init(&robot_y_pid_t);
-    robot_y_pid_t.Kp=0.25f;
-    robot_y_pid_t.Ki=0.0f;
+    robot_y_pid_t.Kp=0.5f;
+    robot_y_pid_t.Ki=0.1f;
     robot_y_pid_t.Kd=0.0f;
     robot_y_pid_t.tau=1.0f;
     robot_y_pid_t.deadband=2;
