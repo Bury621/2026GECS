@@ -887,7 +887,7 @@ void Robot_tick(void)
     {
         Robot_set_move(50,0,0); //开始运动
         Emm_Clear_Forward_Pulse_Count(); //从这个时候开始计纵向里程
-        robot_y_pid_is_open=0;
+        robot_y_pid_is_open=1;
         robot_now_stage=ROBOT_STAGE_TASK2; //切到任务二
         Maxi_Send_cmd(0x02); //让摄像机拍靶子
         
