@@ -29,7 +29,7 @@
 #define ROBOT_ROAD_TIME1 102
 #define ROBOT_ROAD_TIME2 49
 #define ROBOT_ROAD_TIME3 194
-#define ROBOT_ROAD_TIME4 154
+#define ROBOT_ROAD_TIME4 158
 //#define ROBOT_ROAD_TIME5 116
 #define ROBOT_STRAGE3_FORWARD_TIME1 110 //TURN4前直行前半段时间，单位10ms
 #define ROBOT_STRAGE3_FORWARD_TIME2 57 //TURN4前直行后半段时间，单位10ms
@@ -77,7 +77,7 @@ typedef enum{
 
 #define ROBOT_TASK1_BACK_TIME1 9 //位置1的后退时间，单位10ms
 #define ROBOT_TASK1_BACK_TIME2 137 //位置2的后退时间，单位10ms
-#define ROBOT_TASK1_BACK_TIME3 240 //位置3的后退时间，单位10ms
+#define ROBOT_TASK1_BACK_TIME3 241 //位置3的后退时间，单位10ms
 
 #define ROBOT_TASK1_BUCKET_DMG_ANGLE 280 //排爆桶上方DMG6220目标角度
 #define ROBOT_TASK1_BUCKET_DMG_WAIT_TIME 300 //DMG转到排爆桶后的等待时间，单位10ms
