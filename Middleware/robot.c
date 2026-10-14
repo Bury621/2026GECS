@@ -704,7 +704,7 @@ void Robot_tick(void)
         
         robot_time=0; //清零
         robot_y_pid_is_open=1;
-        //robot_y=22;
+        robot_y=20;
         robot_now_stage=ROBOT_STAGE_TASK1;
 
         DMG6220_MoveAngle(&dmg6220_t, 190, 120.0f);
@@ -756,6 +756,7 @@ void Robot_tick(void)
                     robot_now_stage=ROBOT_STAGE_TASK1_EXTEND_GRIPPER;
                     
                     robot_y_pid_is_open=0; //防止阴影影响
+                    robot_y=26;
                     Robot_set_vy(0);
 
                     DMG6220_MoveAngle(&dmg6220_t, 139, 120.0f);
