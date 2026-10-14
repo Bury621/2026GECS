@@ -114,7 +114,7 @@ void App_Init(void)
 
     PIDController_Init(&robot_y_pid_t);
     robot_y_pid_t.Kp=0.5f;
-    robot_y_pid_t.Ki=0.2f;
+    robot_y_pid_t.Ki=0.0f;
     robot_y_pid_t.Kd=0.0f;
     robot_y_pid_t.tau=1.0f;
     robot_y_pid_t.deadband=2;
