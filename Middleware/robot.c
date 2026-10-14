@@ -18,7 +18,7 @@
 #define WHEEL_MAX_SPEED  3000
 
 #define ROBOT_REMOTE_CONTROL_SPEED 80
-#define ROBOT_QUICK_TURN_REDIUS 130.0f
+#define ROBOT_QUICK_TURN_REDIUS 131.0f
 /* 方向修正：1 保持，-1 取反，按实际调试修改 */
 static const int8_t dir_fix[4] = { 1, -1, 1, -1 };
 
@@ -610,7 +610,7 @@ void Robot_tick(void)
     /* 第二条直道前的差速转弯完成：后退，准备扫描二维码 */
     else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_STRAGE2)
     {
-        Robot_set_move(-100,0,0);
+        Robot_set_move(-50,0,0);
         
         robot_time=0; //清零
         robot_y_pid_is_open=1;
@@ -629,7 +629,7 @@ void Robot_tick(void)
     /* 二维码等待时间结束：开始向前行驶 */
     else if(robot_now_stage==ROBOT_STAGE_QR_WAIT && robot_time >= ROBOT_QR_WAIT_TIME)
     {
-        Robot_set_move(100,0,0);
+        Robot_set_move(50,0,0);
 
         robot_y_pid_is_open=1;
         robot_time=0; //清零
@@ -638,7 +638,7 @@ void Robot_tick(void)
     /* 二维码后前进时间结束：继续前进，并进入下一次差速转弯计时 */
     else if(robot_now_stage==ROBOT_STAGE_QR_FORWARD && robot_time >= ROBOT_QR_FORWARD_TIME)
     {
-        Robot_set_move(100,0,0);
+        //Robot_set_move(50,0,0);
 
         //robot_y_pid_is_open=0;
 
@@ -703,7 +703,7 @@ void Robot_tick(void)
         Robot_set_move(50,0,0);
         
         robot_time=0; //清零
-        robot_y_pid_is_open=1;
+        //robot_y_pid_is_open=1;
         //robot_y=22;
         robot_now_stage=ROBOT_STAGE_TASK1;
 

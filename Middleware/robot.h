@@ -21,18 +21,18 @@
 #define ROBOT_DIFF_TURN_ANGLE_DEADBAND 1.0f
 #define ROBOT_DIFF_TURN_TIMEOUT_MS 30000U
 
-#define ROBOT_QR_BACK_TIME 185 //扫二维码后退时间，单位10ms
+#define ROBOT_QR_BACK_TIME 370 //扫二维码后退时间，单位10ms
 #define ROBOT_QR_WAIT_TIME 150 //扫二维码等待时间，单位10ms
-#define ROBOT_QR_FORWARD_TIME 185 //扫二维码前进时间，单位10ms
+#define ROBOT_QR_FORWARD_TIME 370 //扫二维码前进时间，单位10ms
 #define ROBOT_OBSTACLE_TURN_WAIT_TIME 100 //穿越障碍物前转弯等待时间，单位10ms
 #define ROBOT_Y_ALIGN_TIME 100 //差速转弯后的横向闭环时间，单位10ms
-#define ROBOT_ROAD_TIME1 99
-#define ROBOT_ROAD_TIME2 47
-#define ROBOT_ROAD_TIME3 190
-#define ROBOT_ROAD_TIME4 78
+#define ROBOT_ROAD_TIME1 102
+#define ROBOT_ROAD_TIME2 49
+#define ROBOT_ROAD_TIME3 194
+#define ROBOT_ROAD_TIME4 151
 //#define ROBOT_ROAD_TIME5 116
-#define ROBOT_STRAGE3_FORWARD_TIME1 59 //TURN4前直行前半段时间，单位10ms
-#define ROBOT_STRAGE3_FORWARD_TIME2 58 //TURN4前直行后半段时间，单位10ms
+#define ROBOT_STRAGE3_FORWARD_TIME1 55 //TURN4前直行前半段时间，单位10ms
+#define ROBOT_STRAGE3_FORWARD_TIME2 57 //TURN4前直行后半段时间，单位10ms
 #define ROBOT_ROAD_TIME6 80
 
 #define ROBOT_ROAD_TIME7 230 //从任务一到任务二那段直线的时间
