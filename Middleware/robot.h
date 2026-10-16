@@ -75,6 +75,7 @@ typedef enum{
 #define ROBOT_TASK1_CLOSE_GRIPPER_WAIT_TIME 100 //夹爪闭合后等待时间，单位10ms
 #define ROBOT_TASK1_TOWER_UP_WAIT_TIME 150 //塔吊上升后等待时间，单位10ms
 
+//原本是9 137 240
 #define ROBOT_TASK1_BACK_TIME1 15 //位置1的后退时间，单位10ms
 #define ROBOT_TASK1_BACK_TIME2 143 //位置2的后退时间，单位10ms
 #define ROBOT_TASK1_BACK_TIME3 246 //位置3的后退时间，单位10ms

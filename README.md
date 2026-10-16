@@ -10,9 +10,11 @@
 - MaxiCam 目标坐标定位，支持任务目标位置闭环。
 - OpenMV 巡线数据输入，支持横向位置修正。
 - DMG6220 云台电机 CAN 控制，支持位置速度模式和周期重发。
-- Emm 四轮组串口控制，支持速度命令和同步触发。
+- Emm/ZDT 串口总线控制，四轮速度命令、塔吊升降和夹爪伸缩共用一条总线。
 - 舵机机械爪、激光模块和 SSD1306 状态显示。
 - 差速转弯支持转弯半径、最短方向、角速度限幅和超时退出。
+- 纵向里程计按 `vx` 累计脉冲，用于任务二到任务三之间的定距行驶。
+- 板载按键触发 3 秒倒计时自动发车，OLED 同步显示倒计时。
 - VOFA 风格上位机协议，支持 PID 参数在线调参和遥控。
 - 分阶段任务状态机，便于组织比赛流程和任务闭环。
 
@@ -31,8 +33,8 @@
 +----------------+       |                      |       +------------------+
                          |  App / Middleware    |
 +----------------+       |  Hardware Drivers    |       +------------------+
-|    HWT101      | USART2|                      | UART3 |   Emm 四轮组      |
-| 偏航角/角速度  +------>+                      +------>+   速度控制        |
+|    HWT101      | USART2|                      | UART3 |   Emm 总线        |
+| 偏航角/角速度  +------>+                      +------>+  四轮/塔吊/伸缩   |
 +----------------+ DMA   |                      |       +------------------+
                          |                      |
 +----------------+       |                      |       +------------------+
@@ -58,16 +60,22 @@
 | CAN1 | PA11 / PA12 | DMG6220 云台电机控制 |
 | USART1 | PA9 / PA10 | 上位机调参、遥控和调试输出 |
 | USART2 | PA2 / PA3 | HWT101 陀螺仪，DMA 接收 |
-| USART3 | PB10 / PB11 | Emm 四轮组控制 |
+| USART3 | PB10 / PB11 | ZDT/Emm 总线：四轮 0x01-0x04、夹爪伸缩 0x05、塔吊 0x06 |
 | UART5 | PC12 / PD2 | OpenMV 巡线通信，DMA 接收 |
 | USART6 | PG14 / PG9 | MaxiCam 目标定位，DMA 接收 |
-| I2C1 | PB6 / PB7 | 预留 I2C 接口 |
+| I2C1 | PB6 / PB7 | 预留 I2C 接口，标签为 HMC5883L |
 | I2C2 | PF0 / PF1 | SSD1306 OLED |
 | TIM13 CH1 | PF8 | 舵机 PWM |
-| GPIO | PG2 | 激光开关 |
+| GPIO | PD11 | 激光开关 |
 | GPIO | PC13 | 状态 LED |
-| GPIO | PG3 / PG4 | 按键输入 |
+| GPIO | PG3 / PG4 | BTN1 / BTN2 按键输入，上拉，低电平有效 |
 | GPIO | PA15 | 板载按键 |
+| GPIO | PE14 | 已配置为输出，当前未使用 |
+| GPIO | PG2 | 模拟输入，预留 |
+| ADC1 | PA0 | ADC1_IN0，已初始化未使用 |
+| SPI1 | PA5 / PA6 / PA7 | 已初始化未使用 |
+
+所有串口和 CAN 的通信速率均为 `115200 8N1`（CAN 为 1 Mbps）。系统时钟直接使用 HSE，没有启用 PLL，`SYSCLK = HCLK = PCLK1 = 8 MHz`，TIM7 与 TIM10 的计数周期据此配置。
 
 ## 快速上手
 
@@ -183,6 +191,10 @@ Ready
 
 如果 OLED 正常显示且串口收到 `Ready`，说明主控已经完成基础初始化，可以继续测试各个外设。
 
+OLED 在启动时显示 `Bury666`，倒数发车过程中显示 `3 / 2 / 1 / GO`。
+
+注意 USART1 同时也是调试输出口：主循环每 100 ms 会打印一次巡线误差和 MaxiCam 坐标（`line_error`、`x,y,position`）。人工输入命令时可以直接忽略这些行，但用脚本自动解析返回值时需要把它们过滤掉。
+
 ### 6. 第一次通信测试
 
 先使用只读命令确认上位机通道正常：
@@ -194,6 +206,8 @@ Get_yaw:1
 预期 MCU 返回当前偏航角。若没有返回，优先检查串口接线、波特率和 USART1 中断是否正常。
 
 确认通信正常后，再测试舵机和小范围电机动作。所有运动测试都应在底盘架空或车轮离地的状态下进行。
+
+云台、舵机、塔吊和夹爪都有单独的调试命令，例如 `motor:190`、`servo:135`、`tower_down:1`、`claw_out:1`，用法见下文通信协议一节。
 
 ### 7. 推荐首次测试顺序
 
@@ -209,6 +223,15 @@ Get_yaw:1
 8. MaxiCam 和 OpenMV 是否能输出有效数据。
 9. 航向闭环是否能稳定收敛。
 10. 最后再运行完整任务状态机。
+
+### 8. 启动任务流程
+
+源码默认从 `ROBOT_STAGE_WAIT_FOR_START` 开始，有两种发车方式：
+
+- 上位机发送 `start:1`，状态机立即从发车阶段开始运行。
+- 按下 BTN2，OLED 显示 `3`、`2`、`1`、`GO`，三秒后自动置位启动标志。
+
+倒计时只在 `start` 标志尚未置位、且当前没有倒计时进行时才能触发，避免重复启动。
 
 ## 目录结构
 
@@ -228,14 +251,16 @@ Get_yaw:1
 │   └── STM32F4xx_HAL_Driver/ # STM32 HAL 驱动
 ├── Hardware/
 │   ├── DMG6220.*             # CAN 云台电机驱动
-│   ├── Emm.*                 # 四轮组驱动器通信
+│   ├── Emm.*                 # ZDT/Emm 总线：四轮、塔吊、夹爪伸缩、里程计
 │   ├── hwt101.*              # HWT101 姿态传感器驱动
 │   ├── Servo.*               # 舵机 PWM 驱动
 │   ├── Ray.*                 # 激光控制
+│   ├── Led.* / button.*      # 状态 LED 与按键扫描
+│   ├── Debug.*               # printf 重定向
 │   ├── SSD1306/              # OLED 显示
-│   └── mpu6050/              # MPU6050 驱动及接口
+│   └── mpu6050/              # MPU6050 驱动及接口，当前未被应用层调用
 ├── Middleware/
-│   ├── robot.*               # 运动学、闭环控制、差速转弯和任务状态机
+│   ├── robot.*               # 运动学、闭环控制、差速转弯、里程计和任务状态机
 │   ├── PID.*                 # 通用 PID 控制器
 │   ├── Maxi_Connect.*        # MaxiCam 协议解析
 │   ├── Openmv_Connect.*      # OpenMV 协议解析
@@ -264,11 +289,12 @@ flowchart TD
     subgraph APP_INIT["应用初始化 App_Init"]
         STABLE["HAL_Delay 50 x 20<br/>LED 闪烁，等待系统稳定"] --> MIDDLEWARE["初始化 VOFA / MaxiCam / OpenMV<br/>启动 MaxiCam 和 OpenMV DMA 接收"]
         MIDDLEWARE --> PID["初始化角度环和视觉闭环 PID<br/>写入 Kp / Ki / Kd / 限幅 / 死区 / 周期"]
-        PID --> OLED["初始化 SSD1306 并显示启动界面"]
-        OLED --> HWT["初始化 HWT101<br/>启动 DMA 接收并清零偏航角"]
-        HWT --> HARDWARE["初始化 Servo / DMG6220<br/>底盘停车 / 激光关闭 / 机械爪闭合"]
+        PID --> OLED["初始化 SSD1306<br/>显示 Bury666"]
+        OLED --> BTN["初始化按键扫描"]
+        BTN --> HWT["初始化 HWT101<br/>启动 DMA 接收，延时后清零偏航角"]
+        HWT --> HARDWARE["初始化 Servo / DMG6220<br/>使能云台 / 底盘停车<br/>激光关闭 / 机械爪闭合"]
         HARDWARE --> SCHEDULE["启动 TIM7 和 TIM10<br/>启动 USART1 单字节中断接收"]
-        SCHEDULE --> READY["输出 Ready<br/>向 MaxiCam 发送命令 0x01"]
+        SCHEDULE --> READY["输出 Ready"]
     end
 
     APP --> APP_INIT
@@ -281,7 +307,8 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    LOOP["App_Run"] --> CAN["DMG6220_Update<br/>读取 CAN 云台反馈<br/>DMG6220_Service 周期重发目标"]
+    LOOP["App_Run"] --> COUNTDOWN["Countdown_Update<br/>处理 BTN2 倒计时发车"]
+    COUNTDOWN --> CAN["DMG6220_Update<br/>读取 CAN 云台反馈<br/>DMG6220_Service 周期重发目标"]
     CAN --> DIFF_REQ["处理差速转弯请求<br/>停止请求 / 启动请求"]
     DIFF_REQ --> REMOTE["Robot_remote_control<br/>执行上下左右和停车遥控"]
     REMOTE --> TIM7_CHECK{"TIM7 100ms 标志已置位"}
@@ -311,6 +338,7 @@ flowchart TD
         VOFA_FEED --> VOFA_CMD["设置遥控 / start / PID 参数<br/>执行云台、舵机、机械爪、塔吊动作"]
         TIM7_IRQ["TIM7 中断"] --> FLAG7["tim7_100ms_trigged_sign 置 1"]
         TIM10_IRQ["TIM10 中断"] --> FLAG10["tim10_10ms_trigged_sign 置 1"]
+        TIM10_IRQ --> BTN_UPDATE["Button_Update<br/>按键消抖与短按判定"]
         USART2_IRQ["USART2 DMA IDLE / TC"] --> HWT_FEED["hwt101_Feed<br/>解析 0x52 / 0x53 数据并重启 DMA"]
         UART5_IRQ["UART5 DMA IDLE"] --> OPENMV_FEED["Openmv_Feed<br/>更新 openmv_data 并重启 DMA"]
         USART6_IRQ["USART6 DMA IDLE"] --> MAXI_FEED["Maxi_Feed<br/>更新 Maxi_posion_data 并重启 DMA"]
@@ -322,9 +350,12 @@ flowchart TD
     HWT_FEED -.-> ANGLE
     OPENMV_FEED -.-> Y_OPEN
     MAXI_FEED -.-> TASK_TICK
+    BTN_UPDATE -.-> COUNTDOWN
 ```
 
 TIM7 和 TIM10 只负责置位触发标志，实际控制逻辑在主循环中执行。这样中断路径较短，也避免在中断中运行 PID、状态机或阻塞式串口发送。
+
+`App_Run()` 会在每次循环里重发云台目标、处理差速转弯请求和遥控输入；TIM7 分支负责 100 ms 的航向环与横向闭环，TIM10 分支负责 10 ms 的任务状态机推进，两者共用同一个 `debug_start_flag` 启动条件。
 
 ### 航向、差速转弯与电机输出
 
@@ -364,56 +395,64 @@ flowchart TD
 
 ### 完整任务状态机
 
-> 当前源码把初始阶段设置为 `ROBOT_STAGE_WAIT_FOR_START`，发送 `start:1` 后会从发车和巡线流程开始执行完整赛程。
+> 当前源码把初始阶段设置为 `ROBOT_STAGE_WAIT_FOR_START`，发送 `start:1` 或按 BTN2 倒计时发车后，会从发车阶段开始执行完整赛程。
+>
+> `robot.c` 中还保留了一行被注释的 `static Robot_stage robot_now_stage=ROBOT_STAGE_TO_TASK3_STRAIGHT2;`，单独调试任务三时取消注释即可跳过前面的路径。
 
 ```mermaid
 flowchart TD
-    ENTRY{"robot_now_stage 初始值"} -->|"完整赛程 WAIT_FOR_START"| WAIT["WAIT_FOR_START<br/>等待 start 标志"]
-    ENTRY -->|"任务三调试起点（手动切换）"| TASK3_OFFSET
+    ENTRY{"robot_now_stage 初始值"} -->|"完整赛程（当前源码）"| WAIT
+    ENTRY -->|"任务三调试起点（手动切换）"| TASK3
 
-    WAIT -->|"首个 10ms tick"| START["START<br/>vx 为 100，开始发车直行"]
-    START -->|"robot_time 达到 103"| TURN1["TURN1<br/>差速转弯到 90°"]
-    TURN1 -->|"转弯完成"| STRAGE1["STRAGE1<br/>vx 为 100 直行"]
-    STRAGE1 -->|"robot_time 达到 55"| THROUGH_OBSTACLE["THROUGH_OBSTACLE<br/>差速转弯到 0°"]
-    THROUGH_OBSTACLE -->|"转弯完成"| OBSTACLE_WAIT["THROUGH_OBSTACLE_WAIT<br/>停车等待"]
-    OBSTACLE_WAIT -->|"robot_time 达到 100"| TURN2["TURN2<br/>vx 为 50 穿越障碍物"]
-    TURN2 -->|"robot_time 达到 265"| STRAGE2["STRAGE2<br/>差速转弯到 90°"]
-    STRAGE2 -->|"转弯完成"| SCAN_QR["SCAN_QR<br/>vx 为 -100 后退"]
-    SCAN_QR -->|"robot_time 达到 200"| QR_WAIT["QR_WAIT<br/>停车等待二维码处理"]
-    QR_WAIT -->|"robot_time 达到 220"| QR_FORWARD["QR_FORWARD<br/>vx 为 100 前进"]
-    QR_FORWARD -->|"robot_time 达到 200"| TURN3["TURN3<br/>继续前进并计时"]
-    TURN3 -->|"robot_time 达到 75"| STRAGE3["STRAGE3<br/>差速转弯到 0°"]
-    STRAGE3 -->|"转弯完成"| TURN4["TURN4<br/>vx 为 100 直行"]
-    TURN4 -->|"robot_time 达到 116"| STRAGE4["STRAGE4<br/>差速转弯到 270°"]
-    STRAGE4 -->|"转弯完成"| TASK1["TASK1<br/>vx 为 50，DMG 到 190°<br/>MaxiCam 命令 0x01"]
+    WAIT["WAIT_FOR_START<br/>vx 为 100，DMG 到 280°"] -->|"立即"| START["START<br/>发车直行"]
+    START -->|"robot_time 达到 ROBOT_ROAD_TIME1（102）"| TURN1["TURN1<br/>差速转弯到 90°<br/>半径 131cm，线速度 25"]
+    TURN1 -->|"转弯完成"| TURN1_Y_ALIGN["TURN1_Y_ALIGN<br/>停车，开启横向闭环"]
+    TURN1_Y_ALIGN -->|"robot_time 达到 ROBOT_Y_ALIGN_TIME（100）"| STRAGE1["STRAGE1<br/>vx 为 100 直行"]
+    STRAGE1 -->|"robot_time 达到 ROBOT_ROAD_TIME2（49）"| THROUGH_OBSTACLE["THROUGH_OBSTACLE<br/>差速转弯到 0°"]
+    THROUGH_OBSTACLE -->|"转弯完成"| OBSTACLE_WAIT["THROUGH_OBSTACLE_WAIT<br/>停车，开启横向闭环"]
+    OBSTACLE_WAIT -->|"robot_time 达到 ROBOT_OBSTACLE_TURN_WAIT_TIME（100）"| TURN2["TURN2<br/>vx 为 70，穿越障碍物"]
+    TURN2 -->|"robot_time 达到 ROBOT_ROAD_TIME3（194）"| STRAGE2["STRAGE2<br/>差速转弯到 90°"]
+    STRAGE2 -->|"转弯完成"| SCAN_QR["SCAN_QR<br/>vx 为 -50 后退"]
+    SCAN_QR -->|"robot_time 达到 ROBOT_QR_BACK_TIME（390）"| QR_WAIT["QR_WAIT<br/>停车等待二维码处理"]
+    QR_WAIT -->|"robot_time 达到 ROBOT_QR_WAIT_TIME（150）"| QR_FORWARD["QR_FORWARD<br/>vx 为 50 前进"]
+    QR_FORWARD -->|"robot_time 达到 ROBOT_QR_FORWARD_TIME（390）"| TURN3["TURN3<br/>保持前进并继续计时"]
+    TURN3 -->|"robot_time 达到 ROBOT_ROAD_TIME4（158）"| STRAGE3["STRAGE3<br/>差速转弯到 0°"]
+    STRAGE3 -->|"转弯完成"| FWD1["STRAGE3_FORWARD1<br/>vx 为 50 直行"]
+    FWD1 -->|"robot_time 达到 ROBOT_STRAGE3_FORWARD_TIME1（110）"| YALIGN["STRAGE3_Y_ALIGN<br/>停车，开启横向闭环"]
+    YALIGN -->|"robot_time 达到 ROBOT_Y_ALIGN_TIME（100）"| TURN4["TURN4<br/>vx 为 100 直行"]
+    TURN4 -->|"robot_time 达到 ROBOT_STRAGE3_FORWARD_TIME2（57）"| STRAGE4["STRAGE4<br/>差速转弯到 270°"]
+    STRAGE4 -->|"转弯完成"| TASK1["TASK1<br/>vx 为 50，DMG 到 190°<br/>500ms 后发送 MaxiCam 命令 0x01"]
 
-    TASK1 -->|"MaxiCam 有效且误差小于 3<br/>稳定 200ms"| EXTEND_GRIPPER["TASK1_EXTEND_GRIPPER<br/>停车，DMG 到 139°<br/>开爪、塔吊下降、伸爪"]
+    TASK1 -->|"MaxiCam 有效且误差小于 3，稳定 200ms"| EXTEND_GRIPPER["TASK1_EXTEND_GRIPPER<br/>停车，DMG 到 139°<br/>开爪、塔吊下降、伸爪"]
     EXTEND_GRIPPER -->|"robot_time 达到 300"| CLOSE_GRIPPER["TASK1_CLOSE_GRIPPER<br/>闭合机械爪"]
     CLOSE_GRIPPER -->|"下一 tick"| CLOSE_WAIT["TASK1_CLOSE_GRIPPER_WAIT<br/>等待 100"]
     CLOSE_WAIT -->|"robot_time 达到 100"| TOWER_UP["TASK1_TOWER_UP<br/>塔吊上升"]
-    TOWER_UP -->|"robot_time 达到 150"| BACK_BY_POSITION["TASK1_BACK_BY_POSITION<br/>按 position 选择后退时间<br/>vx 为 -30"]
+    TOWER_UP -->|"robot_time 达到 150"| BACK_BY_POSITION["TASK1_BACK_BY_POSITION<br/>执行 Claw_out2，vx 为 -30<br/>按 position 1/2/3 退 15/143/246 拍"]
     BACK_BY_POSITION -->|"后退时间到"| DMG_BUCKET["TASK1_DMG_TO_BUCKET<br/>DMG 到 280°"]
     DMG_BUCKET -->|"下一 tick"| DMG_BUCKET_WAIT["TASK1_DMG_TO_BUCKET_WAIT<br/>等待 300"]
     DMG_BUCKET_WAIT -->|"robot_time 达到 300"| OPEN_WAIT["TASK1_OPEN_GRIPPER_WAIT<br/>开爪并等待 100"]
     OPEN_WAIT -->|"robot_time 达到 100"| DMG_190_WAIT["TASK1_DMG_190_WAIT<br/>关爪，DMG 到 190°<br/>等待 80"]
     DMG_190_WAIT -->|"robot_time 达到 80"| DMG_100_WAIT["TASK1_DMG_100_WAIT<br/>DMG 到 100°，收爪<br/>等待 200"]
-    DMG_100_WAIT -->|"robot_time 达到 200"| TASK1_DONE["TASK1_DONE<br/>vx 为 80，开启横向闭环"]
+    DMG_100_WAIT -->|"robot_time 达到 200"| TASK1_DONE["TASK1_DONE<br/>vx 为 100，开启横向闭环"]
 
-    TASK1_DONE -->|"robot_time 达到 200"| TASK2["TASK2<br/>vx 为 50，关闭横向闭环<br/>MaxiCam 命令 0x02"]
-    TASK2 -->|"误差小于 2，稳定 200ms"| TASK2_DONE["TASK2_DONE<br/>停车，激光开启 2000ms"]
-    TASK2_DONE -->|"激光时间到"| STRAIGHT1["TO_TASK3_STRAIGHT1<br/>关闭激光并直行"]
-    STRAIGHT1 -->|"robot_time 达到 80"| STRAIGHT2["TO_TASK3_STRAIGHT2<br/>差速转弯到 180°"]
-    STRAIGHT2 -->|"转弯完成"| TASK3["TASK3<br/>vx 为 50，DMG 到 100°<br/>MaxiCam 命令 0x03"]
-    TASK3 -->|"误差小于 2，稳定 200ms"| TASK3_OFFSET["TASK3_OFFSET_FORWARD<br/>vx 为 30，短距离补偿夹爪位置"]
-    TASK3_OFFSET -->|"robot_time 达到 140"| DMG_125_WAIT["TASK3_DMG_125_WAIT<br/>停车，DMG 到 125°<br/>等待 100"]
-    DMG_125_WAIT -->|"robot_time 达到 100"| OUT3_WAIT["TASK3_CLAW_OUT3_WAIT<br/>执行 Claw_out3<br/>等待 150"]
-    OUT3_WAIT -->|"robot_time 达到 150"| TASK3_CLOSE["TASK3_CLOSE_GRIPPER_WAIT<br/>闭合夹爪<br/>等待 100"]
-    TASK3_CLOSE -->|"robot_time 达到 100"| TASK3_IN["TASK3_CLAW_IN_WAIT<br/>收回夹爪<br/>等待 100"]
-    TASK3_IN -->|"robot_time 达到 100"| TASK3_TO_END["TASK3_TO_END<br/>DMG 到 190°，vx 为 80 前往终点"]
-    TASK3_TO_END -->|"robot_time 达到 150"| FINISH["END<br/>停车结束"]
+    TASK1_DONE -->|"robot_time 达到 ROBOT_ROAD_TIME7（230）"| TASK2["TASK2<br/>vx 为 50，开启横向闭环<br/>清零纵向里程，MaxiCam 命令 0x02"]
+    TASK2 -->|"误差小于 3，稳定 200ms"| TASK2_DONE["TASK2_DONE<br/>停车，激光开启 2000ms"]
+    TASK2_DONE -->|"激光时间到"| STRAIGHT1["TO_TASK3_STRAIGHT1<br/>关闭激光，vx 为 80 直行"]
+    STRAIGHT1 -->|"纵向里程达到 ROBOT_ROAD_PULSE1（15000）"| STRAIGHT2["TO_TASK3_STRAIGHT2<br/>差速转弯到 180°"]
+    STRAIGHT2 -->|"转弯完成"| TASK3["TASK3<br/>vx 为 30，DMG 到 145°<br/>开爪，清零里程<br/>MaxiCam 命令 0x03"]
+    TASK3 -->|"误差小于 4，稳定 200ms"| TASK3_OFFSET["TASK3_OFFSET_FORWARD<br/>vx 为 30，短距离补偿夹爪位置"]
+    TASK3_OFFSET -->|"robot_time 达到 ROBOT_ROAD_HOSTAGE_OFFSET_TIME（50）"| DMG_125_WAIT["TASK3_DMG_125_WAIT<br/>停车，DMG 到 110°"]
+    DMG_125_WAIT -->|"robot_time 达到 ROBOT_TASK3_DMG_125_WAIT_TIME（135）"| OUT3_WAIT["TASK3_CLAW_OUT3_WAIT<br/>执行 Claw_out3"]
+    OUT3_WAIT -->|"robot_time 达到 ROBOT_TASK3_OUT3_WAIT_TIME（50）"| TASK3_CLOSE["TASK3_CLOSE_GRIPPER_WAIT<br/>闭合夹爪"]
+    TASK3_CLOSE -->|"robot_time 达到 ROBOT_TASK3_CLOSE_GRIPPER_WAIT_TIME（50）"| TASK3_IN["TASK3_CLAW_IN_WAIT<br/>收回夹爪"]
+    TASK3_IN -->|"robot_time 达到 ROBOT_TASK3_CLAW_IN_WAIT_TIME（50）"| TASK3_TO_END["TASK3_TO_END<br/>DMG 到 190°，vx 为 80 前往终点"]
+    TASK3_TO_END -->|"robot_time 达到 50"| DMG_235["DMG 到 235°"]
+    TASK3_TO_END -->|"纵向里程达到 ROBOT_ROAD_PULSE2（32350）"| FINISH["END<br/>停车结束"]
 ```
 
-状态机由 `Robot_tick()` 以 10ms 周期推进。差速转弯运行期间 `Robot_tick()` 会清零 `robot_time` 并直接返回，因此转弯耗时不会计入后续直线段的计时。
+状态机由 `Robot_tick()` 以 10ms 周期推进，每个阶段的阈值都定义在 `Middleware/robot.h` 中，括号里是当前源码的取值，单位是 10ms 节拍。差速转弯运行期间 `Robot_tick()` 会清零 `robot_time` 并直接返回，因此转弯耗时不会计入后续直线段的计时。
+
+三个视觉任务都用 MaxiCam 的 `x` 坐标做闭环，误差进入容差并连续稳定 200ms 后才继续下一步动作；任务二到任务三、任务三到终点这两段改用 Emm 的纵向里程脉冲判断是否走够了距离，不再依赖计时。
 
 ## 控制链路
 
@@ -428,7 +467,9 @@ w3 = vx - vy - omega
 w4 = vx + vy + omega
 ```
 
-四轮命令在发送前进行最大绝对值归一化，任一车轮达到最大速度时，其他车轮按比例缩放，以保持底盘运动方向。
+四轮命令在发送前进行最大绝对值归一化，任一车轮达到 `WHEEL_MAX_SPEED`（3000）时，其他车轮按比例缩放，以保持底盘运动方向。计算结果还会乘上 `dir_fix[]` 方向修正表，按机械安装方向逐个取反。
+
+四个轮组不是一次性广播的：`Robot_update_move()` 依次发送速度命令，每条之间 `HAL_Delay(5)`，随后调用 `Emm_Sync_Trig()` 让四轮同步启动，避免启动瞬间的相位差。
 
 ### 航向控制
 
@@ -437,8 +478,10 @@ w4 = vx + vy + omega
 1. 读取偏航角并处理跨越正负 180 度的连续角度。
 2. 计算目标航向与当前航向之间的最短误差。
 3. 通过 PID 计算旋转速度。
-4. 对旋转输出变化率进行限制。
+4. 对旋转输出变化率进行限制，每个 100ms 周期最多变化 10。
 5. 使用积分限幅和误差死区抑制振荡。
+
+角度环的 PID 参数在 `App_Init()` 中初始化，默认 `Kp=1.0`、`Ki=0.019`、`Kd=0.101`，积分限幅为 ±20，误差死区 0.3°。由于 HWT101 的正向与底盘 `omega` 正向相反，输出会乘上 `ROBOT_ANGLE_OUTPUT_SIGN`，改动轮子方向后需要同步检查这个符号。
 
 ### 视觉位置控制
 
@@ -449,7 +492,27 @@ MaxiCam 提供目标坐标后，任务控制器使用独立 PID 将坐标误差�
 速度命令 = PID(位置误差)
 ```
 
-OpenMV 提供巡线误差，用于修正横向速度和保持车身相对赛道的位置。
+三个任务各有一个独立 PID（小球 134、靶子 300、人质 400），误差进入容差并稳定 200ms 后就算到位。任务一、任务二把 PID 输出的负值直接作为 `vx`，任务三同理；如果目标坐标方向与底盘运动方向不一致，应该先修正符号而不是加大 `Kp`。
+
+OpenMV 提供巡线误差，用于修正横向速度和保持车身相对赛道的位置：
+
+```text
+vy = PID(robot_y, openmv_data.line_error)
+```
+
+横向闭环只在 `robot_y_pid_is_open` 置位、并且 `line_error` 非 0 时生效；OpenMV 报告处于转弯状态时直接把 `vy` 置 0，避免转弯过程中被横线干扰。
+
+### 纵向里程计
+
+`Robot_update_move()` 会把 `vx` 单独交给 `Emm_Set_Forward_Speed()`，按速度命令累计脉冲，`vy` 和 `omega` 都不计入里程。任务二结束后的直道和任务三到终点的直道用 `Emm_Read_Forward_Pulse_Count()` 判断是否走够距离，阈值分别是 `ROBOT_ROAD_PULSE1`（15000）和 `ROBOT_ROAD_PULSE2`（32350）：
+
+```text
+进入直道时 Emm_Clear_Forward_Pulse_Count()
+直行过程中累计脉冲
+脉冲达到阈值后切换到下一阶段
+```
+
+这样就把原来的固定时间行驶换成了按实际行驶距离判断，撞车或打滑时不会继续盲走。
 
 ### 差速转弯
 
@@ -462,6 +525,8 @@ OpenMV 提供巡线误差，用于修正横向速度和保持车身相对赛道�
 - 超时退出。
 - 转弯结束后恢复原前后速度。
 - 重置角度环历史状态，减少回抽。
+
+角速度按 `omega = linear_speed * 100 / radius_cm` 计算，上限 `ROBOT_DIFF_TURN_MAX_OMEGA`（500）；半径小于 0.1cm 时退化为原地旋转。到位死区 1°，超时时间 30s，超时后停车并把 `robot_angle` 同步到当前连续角度。赛程中所有差速转弯都使用半径 131cm、线速度 25。
 
 ## 任务状态机
 
@@ -483,7 +548,9 @@ OpenMV 提供巡线误差，用于修正横向速度和保持车身相对赛道�
 
 状态机以 10ms 周期推进。差速转弯运行期间暂停普通阶段计时，避免转弯耗时影响后续运动时间。
 
-当前源码默认从 `ROBOT_STAGE_WAIT_FOR_START` 开始，发送 `start:1` 后会从“等待启动”和发车阶段开始运行完整比赛链路。
+当前源码默认从 `ROBOT_STAGE_WAIT_FOR_START` 开始，发送 `start:1` 或按 BTN2 倒计时发车后，会从“等待启动”和发车阶段开始运行完整比赛链路。
+
+阶段名称与 `Middleware/robot.h` 中的 `Robot_stage` 枚举一一对应，迁移条件集中在 `Middleware/robot.c` 的 `Robot_tick()` 里，调整赛段时只需要改这个函数和 `robot.h` 中的时间常量。
 
 ## 通信协议
 
@@ -539,22 +606,27 @@ Byte 0      Byte 1      Byte 6-7
 |---|---|
 | `motor:<angle>` | 设置云台目标角度 |
 | `servo:<angle>` | 设置舵机角度 |
-| `Get_yaw:<value>` | 读取当前偏航角 |
+| `Get_yaw:<value>` | 读取当前偏航角并打印 |
 | `Reset_mcu:<value>` | 复位 MCU |
 | `start:<value>` | 允许任务状态机运行 |
-| `forward:<1/0>` | 前进控制 |
+| `forward:<1/0>` | 前进控制，非 1 视为停止 |
 | `backward:<1/0>` | 后退控制 |
-| `left:<1/0>` | 左移控制 |
-| `right:<1/0>` | 右移控制 |
-| `Stop:<value>` | 停车 |
-| `Kp:<value>` | 设置航向环 Kp |
-| `Ki:<value>` | 设置航向环 Ki |
-| `Kd:<value>` | 设置航向环 Kd |
+| `left:<1/0>` | 左移控制，置 1 时同时关闭横向闭环 |
+| `right:<1/0>` | 右移控制，置 1 时同时关闭横向闭环 |
+| `Stop:<value>` | 停车并结束正在进行的差速转弯 |
+| `Kp:<value>` / `Ki:<value>` / `Kd:<value>` | 分别设置航向环 Kp、Ki、Kd |
 | `angle:<value>` | 设置目标航向角 |
 | `turn:<value>` | 目标航向增加 90 度 |
 | `diff_radius:<value>` | 设置差速转弯半径 |
-| `diff_turn:<angle>` | 启动一次差速转弯 |
-| `high:<position>` | 控制升降或位置机构 |
+| `diff_turn:<angle>` | 启动一次差速转弯到指定的绝对航向 |
+| `high:<position>` | 塔吊升降的相对位置命令 |
+| `tower_down:<value>` | 塔吊下降到最低位 |
+| `tower_up:<value>` | 塔吊上升到最高位 |
+| `claw_out:<value>` | 夹爪伸缩机构伸出到 out1 位置 |
+| `claw_in:<value>` | 夹爪伸缩机构收回 |
+| `ypid:<value>` | 反转横向闭环开关 |
+
+命令名需要完全匹配，区分大小写；数值部分由 `VOFA_Recevice_Callback()` 解析成 `float`，没有实际用到的值可以任意填写。
 
 ## 构建环境
 
@@ -591,7 +663,7 @@ Byte 0      Byte 1      Byte 6-7
 2. 连接调试器和上位机串口。
 3. 烧录并复位控制器。
 4. 确认 OLED、CAN 云台和各串口设备初始化正常。
-5. 使用上位机发送 `start:1` 后启动任务状态机。
+5. 使用上位机发送 `start:1`，或按 BTN2 走完 3 秒倒计时，启动任务状态机。
 6. 调试期间使用 `Stop:1` 或遥控命令停止底盘。
 
 ## 关键配置位置
@@ -602,13 +674,21 @@ Byte 0      Byte 1      Byte 6-7
 | 航向环 | `Middleware/robot.c` 的 `Robot_Angle_Update()` |
 | 差速转弯参数 | `Middleware/robot.h` 和 `Middleware/robot.c` |
 | 麦克纳姆轮速度分解 | `Middleware/robot.c` 的 `Robot_update_move()` |
+| 方向修正 | `Middleware/robot.c` 的 `dir_fix[]` 和 `ROBOT_ANGLE_OUTPUT_SIGN` |
+| 横向闭环目标 | `App/App.c` 的 `robot_y`，默认 28，任务三前段改为 32 |
 | 任务阶段定义 | `Middleware/robot.h` 的 `Robot_stage` |
+| 赛段时间常量 | `Middleware/robot.h` 的 `ROBOT_ROAD_TIME*`、`ROBOT_QR_*`、`ROBOT_TASK*` 等宏 |
+| 里程阈值 | `Middleware/robot.h` 的 `ROBOT_ROAD_PULSE1` 和 `ROBOT_ROAD_PULSE2` |
 | 任务状态机 | `Middleware/robot.c` 的 `Robot_tick()` |
+| 视觉任务目标与容差 | `Middleware/robot.h` 的 `ROBOT_TASK*_TARGET` 和 `*_ERROR_TOLERANCE` |
+| 夹爪、塔吊与伸缩动作 | `Middleware/robot.c` 的 `Robot_Claw_*()` 和 `Robot_Tower_*()` |
+| 按键倒计时发车 | `App/App.c` 的 `Countdown_Update()` |
 | MaxiCam 协议 | `Middleware/Maxi_Connect.c` |
 | OpenMV 协议 | `Middleware/Openmv_Connect.c` |
 | VOFA 命令 | `App/App.c` 的 `VOFA_Get_Package_Callback()` |
 | CAN 云台驱动 | `Hardware/DMG6220.c` |
-| 四轮组通信 | `Hardware/Emm.c` |
+| 四轮组与执行机构通信 | `Hardware/Emm.c` |
+| 系统时钟 | `Core/Src/main.c` 的 `SystemClock_Config()`，HSE 直连 8MHz |
 
 ## 安全注意事项
 
@@ -655,6 +735,14 @@ Byte 0      Byte 1      Byte 6-7
 - 检查 TX 和 RX 是否交叉连接。
 - 检查主控与 USB 转串口是否共地。
 - 确认上位机命令以换行符结束，例如 `Get_yaw:1\n`。
+- 注意 `line_error` 和 MaxiCam 坐标的周期打印也占用 USART1，脚本解析时需要过滤这些行。
+
+### 发送 start 后底盘不动
+
+- 确认命令为 `start:1` 并以换行结束，不是 `start:0`。
+- 确认 OLED 已完成倒计时或已收到启动命令，`debug_start_flag` 为 1。
+- 确认 TIM10 中断正常触发，10ms 标志位能置位。
+- 确认 Emm 驱动器已使能，并且 `Robot_tick()` 里的当前阶段确实要求底盘运动。
 
 ### OLED 不显示
 
@@ -698,6 +786,7 @@ Byte 0      Byte 1      Byte 6-7
 - 检查帧头、帧尾、帧长度和数据字节序。
 - 检查视觉模块的波特率是否与主控一致。
 - 检查视觉模块输出的是否是当前协议版本。
+- 确认 MaxiCam 的 `state` 为 0，否则任务状态机会一直等待有效坐标。
 
 ## 开发规范
 
@@ -715,7 +804,9 @@ Byte 0      Byte 1      Byte 6-7
 1. 将 `robot.c` 拆分为底盘控制、航向控制、差速转弯和任务状态机模块。
 2. 建立统一的机器人上下文对象，减少跨模块 `extern` 全局变量。
 3. 为每个传感器数据增加时间戳、有效性和超时状态。
-4. 使用固定周期调度器统一管理 1 ms、10 ms 和 100 ms 任务。
+4. 使用固定周期调度器统一管理 10 ms 和 100 ms 任务，替代当前的标志位轮询。
 5. 将串口中断中的复杂命令处理移动到主循环任务队列。
 6. 为 PID、协议解析和任务状态机增加单元测试或硬件在环测试。
 7. 增加日志、故障码和控制参数持久化机制。
+8. 把任务状态机的阶段迁移与动作抽取成表驱动结构，减少 `Robot_tick()` 中的长分支。
+9. 让三个视觉任务的 PID 参数和目标值可以运行时下发，不再需要重新编译。
