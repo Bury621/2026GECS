@@ -589,7 +589,7 @@ void Robot_tick(void)
     /* 等待时间到：前进穿越障碍物，随后进入下一段直行计时 */
     else if(robot_now_stage==ROBOT_STAGE_THROUGH_OBSTACLE_WAIT && robot_time >= ROBOT_OBSTACLE_TURN_WAIT_TIME)
     {
-        Robot_set_move(70,0,0);
+        Robot_set_move(100,0,0);
         robot_y_pid_is_open=0;
         Robot_set_vy(0);
         robot_time=0; //清零
@@ -610,7 +610,7 @@ void Robot_tick(void)
     /* 第二条直道前的差速转弯完成：后退，准备扫描二维码 */
     else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_STRAGE2)
     {
-        Robot_set_move(-50,0,0);
+        Robot_set_move(-100,0,0);
         
         robot_time=0; //清零
         robot_y_pid_is_open=1;
@@ -629,7 +629,7 @@ void Robot_tick(void)
     /* 二维码等待时间结束：开始向前行驶 */
     else if(robot_now_stage==ROBOT_STAGE_QR_WAIT && robot_time >= ROBOT_QR_WAIT_TIME)
     {
-        Robot_set_move(50,0,0);
+        Robot_set_move(100,0,0);
 
         robot_y_pid_is_open=1;
         robot_time=0; //清零
@@ -659,7 +659,7 @@ void Robot_tick(void)
     /* 差速转弯完成：先前进ROBOT_ROAD_TIME4的一半，不开启横向闭环 */
     else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_STRAGE3)
     {
-        Robot_set_move(50,0,0);
+        Robot_set_move(100,0,0);
 
         robot_time=0; //清零
         robot_y_pid_is_open=0;
@@ -704,7 +704,7 @@ void Robot_tick(void)
         
         robot_time=0; //清零
         robot_y_pid_is_open=1;
-        //robot_y=20;
+        robot_y=20;
         robot_now_stage=ROBOT_STAGE_TASK1;
 
         DMG6220_MoveAngle(&dmg6220_t, 190, 120.0f);
@@ -802,7 +802,7 @@ void Robot_tick(void)
     {
         
         Robot_Tower_up();
-        HAL_Delay(4);
+        HAL_Delay(7);
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TASK1_TOWER_UP;
     }
@@ -1115,5 +1115,5 @@ void Robot_Claw_out3(void)
 }
 void Robot_Claw_in(void)
 {
-    Emm_position_Mode(0x05,80,0,50,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x05,80,0,100,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
