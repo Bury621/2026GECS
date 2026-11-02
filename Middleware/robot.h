@@ -26,10 +26,10 @@
 #define ROBOT_QR_FORWARD_TIME 390 //扫二维码前进时间，单位10ms
 #define ROBOT_OBSTACLE_TURN_WAIT_TIME 100 //穿越障碍物前转弯等待时间，单位10ms
 #define ROBOT_Y_ALIGN_TIME 100 //差速转弯后的横向闭环时间，单位10ms
-#define ROBOT_ROAD_TIME1 102
+#define ROBOT_ROAD_TIME1 98
 #define ROBOT_ROAD_TIME2 49
-#define ROBOT_ROAD_TIME3 194
-#define ROBOT_ROAD_TIME4 158
+#define ROBOT_ROAD_TIME3 190
+#define ROBOT_ROAD_TIME4 185
 //#define ROBOT_ROAD_TIME5 116
 #define ROBOT_STRAGE3_FORWARD_TIME1 110 //TURN4前直行前半段时间，单位10ms
 #define ROBOT_STRAGE3_FORWARD_TIME2 57 //TURN4前直行后半段时间，单位10ms
@@ -49,7 +49,7 @@
 #define ROBOT_TASK2_LASER_ON_TIME_MS 2000U //任务二激光打开持续时间
 
 #define ROBOT_TASK3_HOSTAGE_TARGET 400 //任务三闭环人质的位置
-#define ROBOT_TASK3_HOSTAGE_ERROR_TOLERANCE 4.0f //任务三人质位置误差容差
+#define ROBOT_TASK3_HOSTAGE_ERROR_TOLERANCE 5.0f //任务三人质位置误差容差
 #define ROBOT_TASK3_HOSTAGE_STABLE_TIME_MS 200U //任务三误差持续在容差内的时间
 
 #define ROBOT_ROAD_HOSTAGE_OFFSET_TIME 50 //任务三补偿时间
@@ -89,7 +89,7 @@ typedef enum{
 #define ROBOT_TASK1_DMG_100_WAIT_TIME 200 //DMG转到100后的等待时间，单位10ms
 
 #define ROBOT_ROAD_PULSE1 15000 //任务二结束的第一条直道的计里程
-#define ROBOT_ROAD_PULSE2 32350 //任务二结束的第二条直道的计里程
+#define ROBOT_ROAD_PULSE2 32100 //任务二结束的第二条直道的计里程
 
 typedef enum{
     ROBOT_STAGE_WAIT_FOR_START=0,
