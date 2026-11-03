@@ -7,7 +7,7 @@
 #include <hwt101.h>
 #include <PID.h>
 
-#define ROBOT_QUICK_TURN_SPEED 30
+#define ROBOT_QUICK_TURN_SPEED 25
 
 #define ROBOT_MOVE_SET_MOTOR_DELAY 5
 
@@ -27,10 +27,10 @@
 #define ROBOT_QR_WAIT_TIME 150 //扫二维码等待时间，单位10ms
 #define ROBOT_QR_FORWARD_TIME 210 //扫二维码前进时间，单位10ms
 #define ROBOT_OBSTACLE_TURN_WAIT_TIME 100 //穿越障碍物前转弯等待时间，单位10ms
-#define ROBOT_Y_ALIGN_TIME 100 //差速转弯后的横向闭环时间，单位10ms
+#define ROBOT_Y_ALIGN_TIME 200 //差速转弯后的横向闭环时间，单位10ms
 #define ROBOT_ROAD_TIME1 98
 #define ROBOT_ROAD_TIME2 53
-#define ROBOT_ROAD_TIME3 121
+#define ROBOT_ROAD_TIME3 117
 #define ROBOT_ROAD_TIME4 84
 //#define ROBOT_ROAD_TIME5 116
 #define ROBOT_STRAGE3_FORWARD_TIME1 152 //TURN4前直行前半段时间，单位10ms
