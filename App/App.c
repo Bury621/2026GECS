@@ -47,7 +47,7 @@ volatile uint8_t debug_start_flag=0; //上位机发送start:1后才启动
 
 //一些变量
 volatile uint16_t robot_angle=0; //角度环的目标角度
-volatile uint16_t robot_y=28; //水平位置环的目标
+volatile uint16_t robot_y=30; //水平位置环的目标
 
 volatile uint8_t robot_y_pid_is_open=0; //是否开启水平位置环
 
@@ -113,7 +113,7 @@ void App_Init(void)
     robot_angle_pid_t.T=0.1f;
 
     PIDController_Init(&robot_y_pid_t);
-    robot_y_pid_t.Kp=0.5f;
+    robot_y_pid_t.Kp=0.7f;
     robot_y_pid_t.Ki=0.0f;
     robot_y_pid_t.Kd=0.0f;
     robot_y_pid_t.tau=1.0f;

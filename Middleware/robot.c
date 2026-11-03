@@ -503,7 +503,7 @@ void Robot_Tower_down(void)
 
 void Robot_Tower_up(void)
 {
-    Emm_position_Mode(0x06,1000,0,0,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x06,1000,0,150,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 /**
  * @brief 机器人的时钟，在主循环里面10ms调用一次
@@ -545,7 +545,7 @@ void Robot_tick(void)
     /* 发车后直行ROBOT_ROAD_TIME1，随后差速转到90度 */
     else if(robot_now_stage==ROBOT_STAGE_START && robot_time >= ROBOT_ROAD_TIME1)
     {
-        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 90.0f,25);
+        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 90.0f,ROBOT_QUICK_TURN_SPEED);
 
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TURN1;
@@ -571,7 +571,7 @@ void Robot_tick(void)
     /* 第一段直行结束：差速转到0度，准备穿越障碍物 */
     else if(robot_now_stage==ROBOT_STAGE_STRAGE1 && robot_time >= ROBOT_ROAD_TIME2)
     {
-        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 0.0f,25);
+        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 0.0f,ROBOT_QUICK_TURN_SPEED);
         robot_y_pid_is_open=0;
 
         robot_time=0; //清零
@@ -589,7 +589,7 @@ void Robot_tick(void)
     /* 等待时间到：前进穿越障碍物，随后进入下一段直行计时 */
     else if(robot_now_stage==ROBOT_STAGE_THROUGH_OBSTACLE_WAIT && robot_time >= ROBOT_OBSTACLE_TURN_WAIT_TIME)
     {
-        Robot_set_move(100,0,0);
+        Robot_set_move(130,0,0);
         robot_y_pid_is_open=0;
         Robot_set_vy(0);
         robot_time=0; //清零
@@ -600,7 +600,7 @@ void Robot_tick(void)
     {
         //Robot_set_move(0,0,0);
         //robot_angle=90; //旋转
-        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 90.0f,25);
+        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 90.0f,ROBOT_QUICK_TURN_SPEED);
 
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_STRAGE2; //切换到第二条直道
@@ -651,7 +651,7 @@ void Robot_tick(void)
         // Robot_set_move(0,0,0);
         // robot_angle=0; //旋转
         robot_y_pid_is_open=0;
-        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 0.0f,25);
+        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 0.0f,ROBOT_QUICK_TURN_SPEED);
         robot_time=0; //清零
         robot_y_pid_is_open=0;
         robot_now_stage=ROBOT_STAGE_STRAGE3;
@@ -659,7 +659,7 @@ void Robot_tick(void)
     /* 差速转弯完成：先前进ROBOT_ROAD_TIME4的一半，不开启横向闭环 */
     else if(!Robot_is_differential_turning() && robot_now_stage==ROBOT_STAGE_STRAGE3)
     {
-        Robot_set_move(100,0,0);
+        Robot_set_move(50,0,0);
 
         robot_time=0; //清零
         robot_y_pid_is_open=0;
@@ -681,7 +681,7 @@ void Robot_tick(void)
         Robot_set_move(100,0,0);
         
         robot_time=0; //清零
-        robot_y_pid_is_open=1;
+        robot_y_pid_is_open=0;
         robot_now_stage=ROBOT_STAGE_TURN4;
         
     }
@@ -691,7 +691,7 @@ void Robot_tick(void)
         //Robot_set_move(0,0,0);
         //robot_angle=270; //旋转
 
-        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 270.0f,25);
+        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 270.0f,ROBOT_QUICK_TURN_SPEED);
         robot_y_pid_is_open=0;
 
         robot_time=0; //清零
@@ -800,9 +800,9 @@ void Robot_tick(void)
     /* 夹爪闭合1000ms后，启动塔吊上升 */
     else if(robot_now_stage==ROBOT_STAGE_TASK1_CLOSE_GRIPPER_WAIT && robot_time >= ROBOT_TASK1_CLOSE_GRIPPER_WAIT_TIME)
     {
-        
+        HAL_Delay(4);
         Robot_Tower_up();
-        HAL_Delay(7);
+        
         robot_time=0; //清零
         robot_now_stage=ROBOT_STAGE_TASK1_TOWER_UP;
     }
@@ -954,15 +954,15 @@ void Robot_tick(void)
             robot_y_pid_is_open=1;
             robot_task2_laser_on_timing=0;
 
-            Robot_set_move(80,0,0); //直行
+            Robot_set_move(100,0,0); //直行
             robot_now_stage=ROBOT_STAGE_TO_TASK3_STRAIGHT1;
             robot_time=0;
         }
     }
     else if(robot_now_stage==ROBOT_STAGE_TO_TASK3_STRAIGHT1 && Emm_Read_Forward_Pulse_Count() >= ROBOT_ROAD_PULSE1)
     {
-        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 180.0f,25); //相对角度问题，到时候正式的换成这个
-        //Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 270.0f,25);
+        Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 180.0f,ROBOT_QUICK_TURN_SPEED); //相对角度问题，到时候正式的换成这个
+        //Robot_start_differential_turn_ex(ROBOT_QUICK_TURN_REDIUS, 270.0f,ROBOT_QUICK_TURN_SPEED);
         robot_time=0;
         robot_y_pid_is_open=0;
         robot_now_stage=ROBOT_STAGE_TO_TASK3_STRAIGHT2; //切换状态
@@ -974,7 +974,7 @@ void Robot_tick(void)
         
         Robot_set_move(30,0,0); //慢速直行
         robot_y_pid_is_open=1;
-        robot_y=32;
+        robot_y=33;
         DMG6220_MoveAngle(&dmg6220_t, 145, 120.0f);
         Robot_Claw_open(); //打开夹爪
 
@@ -1115,5 +1115,5 @@ void Robot_Claw_out3(void)
 }
 void Robot_Claw_in(void)
 {
-    Emm_position_Mode(0x05,80,0,100,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x05,80,0,0,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }

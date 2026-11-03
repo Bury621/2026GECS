@@ -7,6 +7,8 @@
 #include <hwt101.h>
 #include <PID.h>
 
+#define ROBOT_QUICK_TURN_SPEED 30
+
 #define ROBOT_MOVE_SET_MOTOR_DELAY 5
 
 #define ROBOT_TURNING_JUJGUE_ANGLE_DEADBAND 1 //角度误差多少以内认为旋转完成
@@ -21,21 +23,22 @@
 #define ROBOT_DIFF_TURN_ANGLE_DEADBAND 1.0f
 #define ROBOT_DIFF_TURN_TIMEOUT_MS 30000U
 
-#define ROBOT_QR_BACK_TIME 195 //扫二维码后退时间，单位10ms
+#define ROBOT_QR_BACK_TIME 210 //扫二维码后退时间，单位10ms
 #define ROBOT_QR_WAIT_TIME 150 //扫二维码等待时间，单位10ms
-#define ROBOT_QR_FORWARD_TIME 195 //扫二维码前进时间，单位10ms
+#define ROBOT_QR_FORWARD_TIME 210 //扫二维码前进时间，单位10ms
 #define ROBOT_OBSTACLE_TURN_WAIT_TIME 100 //穿越障碍物前转弯等待时间，单位10ms
 #define ROBOT_Y_ALIGN_TIME 100 //差速转弯后的横向闭环时间，单位10ms
 #define ROBOT_ROAD_TIME1 98
-#define ROBOT_ROAD_TIME2 55
-#define ROBOT_ROAD_TIME3 140
-#define ROBOT_ROAD_TIME4 92
+#define ROBOT_ROAD_TIME2 53
+#define ROBOT_ROAD_TIME3 121
+#define ROBOT_ROAD_TIME4 84
 //#define ROBOT_ROAD_TIME5 116
-#define ROBOT_STRAGE3_FORWARD_TIME1 57 //TURN4前直行前半段时间，单位10ms
-#define ROBOT_STRAGE3_FORWARD_TIME2 57 //TURN4前直行后半段时间，单位10ms
+#define ROBOT_STRAGE3_FORWARD_TIME1 152 //TURN4前直行前半段时间，单位10ms
+#define ROBOT_STRAGE3_FORWARD_TIME2 33 //TURN4前直行后半段时间，单位10ms
+
 #define ROBOT_ROAD_TIME6 80
 
-#define ROBOT_ROAD_TIME7 230 //从任务一到任务二那段直线的时间
+#define ROBOT_ROAD_TIME7 250 //从任务一到任务二那段直线的时间
 #define ROBOT_ROAD_TIME8 80 //完成任务二之后那个直道的时间
 
 #define ROBOT_TASK1_BALL_TARGET 134 //任务一闭环目标小球的位置
@@ -88,7 +91,7 @@ typedef enum{
 #define ROBOT_TASK1_DMG_100_ANGLE 100 //最后的DMG6220目标角度
 #define ROBOT_TASK1_DMG_100_WAIT_TIME 200 //DMG转到100后的等待时间，单位10ms
 
-#define ROBOT_ROAD_PULSE1 15000 //任务二结束的第一条直道的计里程
+#define ROBOT_ROAD_PULSE1 15350 //任务二结束的第一条直道的计里程
 #define ROBOT_ROAD_PULSE2 32100 //任务二结束的第二条直道的计里程
 
 typedef enum{
