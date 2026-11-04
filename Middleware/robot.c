@@ -68,8 +68,8 @@ static uint8_t robot_task1_back_started=0;
 static uint8_t robot_task1_dmg_started=0;
 
 /* 保存小车当前状态 */
-//static Robot_stage robot_now_stage=ROBOT_STAGE_WAIT_FOR_START; //完整赛程：发送start后从发车开始
-static Robot_stage robot_now_stage=ROBOT_STAGE_TURN4; //调任务一
+static Robot_stage robot_now_stage=ROBOT_STAGE_WAIT_FOR_START; //完整赛程：发送start后从发车开始
+//static Robot_stage robot_now_stage=ROBOT_STAGE_TURN4; //调任务一
 //static Robot_stage robot_now_stage=ROBOT_STAGE_TASK1_DMG_190_WAIT; //调任务二
 
 Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位

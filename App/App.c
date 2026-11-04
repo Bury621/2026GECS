@@ -138,7 +138,7 @@ void App_Init(void)
 
     PIDController_Init(&robot_task2_target_pid_t);
     robot_task2_target_pid_t.Kp=0.4f;
-    robot_task2_target_pid_t.Ki=0.01f;
+    robot_task2_target_pid_t.Ki=0.00f;
     robot_task2_target_pid_t.Kd=0.00f;
     robot_task2_target_pid_t.tau=0.05f;
     robot_task2_target_pid_t.deadband=2;
