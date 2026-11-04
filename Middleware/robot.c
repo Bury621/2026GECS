@@ -18,7 +18,7 @@
 #define WHEEL_MAX_SPEED  3000
 
 #define ROBOT_REMOTE_CONTROL_SPEED 80
-#define ROBOT_QUICK_TURN_REDIUS 131.0f
+#define ROBOT_QUICK_TURN_REDIUS 125.0f
 /* 方向修正：1 保持，-1 取反，按实际调试修改 */
 static const int8_t dir_fix[4] = { 1, -1, 1, -1 };
 
@@ -68,8 +68,9 @@ static uint8_t robot_task1_back_started=0;
 static uint8_t robot_task1_dmg_started=0;
 
 /* 保存小车当前状态 */
-static Robot_stage robot_now_stage=ROBOT_STAGE_WAIT_FOR_START; //完整赛程：发送start后从发车开始
-//static Robot_stage robot_now_stage=ROBOT_STAGE_TO_TASK3_STRAIGHT2;
+//static Robot_stage robot_now_stage=ROBOT_STAGE_WAIT_FOR_START; //完整赛程：发送start后从发车开始
+//static Robot_stage robot_now_stage=ROBOT_STAGE_TURN4; //调任务一
+static Robot_stage robot_now_stage=ROBOT_STAGE_TASK1_DMG_190_WAIT; //调任务二
 
 Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
 
@@ -704,7 +705,7 @@ void Robot_tick(void)
         
         robot_time=0; //清零
         robot_y_pid_is_open=1;
-        robot_y=20;
+        robot_y=40;
         robot_now_stage=ROBOT_STAGE_TASK1;
 
         DMG6220_MoveAngle(&dmg6220_t, 190, 120.0f);
@@ -1103,7 +1104,7 @@ void Robot_Claw_close(void)
 }
 void Robot_Claw_out1(void)
 {
-    Emm_position_Mode(0x05,80,0,1620,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x05,80,0,1200,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 void Robot_Claw_out2(void)
 {

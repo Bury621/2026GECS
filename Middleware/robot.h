@@ -29,19 +29,19 @@
 #define ROBOT_OBSTACLE_TURN_WAIT_TIME 100 //穿越障碍物前转弯等待时间，单位10ms
 #define ROBOT_Y_ALIGN_TIME 200 //差速转弯后的横向闭环时间，单位10ms
 #define ROBOT_ROAD_TIME1 98
-#define ROBOT_ROAD_TIME2 53
+#define ROBOT_ROAD_TIME2 56
 #define ROBOT_ROAD_TIME3 117
-#define ROBOT_ROAD_TIME4 84
+#define ROBOT_ROAD_TIME4 88
 //#define ROBOT_ROAD_TIME5 116
-#define ROBOT_STRAGE3_FORWARD_TIME1 152 //TURN4前直行前半段时间，单位10ms
-#define ROBOT_STRAGE3_FORWARD_TIME2 33 //TURN4前直行后半段时间，单位10ms
+#define ROBOT_STRAGE3_FORWARD_TIME1 132 //TURN4前直行前半段时间，单位10ms
+#define ROBOT_STRAGE3_FORWARD_TIME2 46 //TURN4前直行后半段时间，单位10ms
 
 #define ROBOT_ROAD_TIME6 80
 
 #define ROBOT_ROAD_TIME7 250 //从任务一到任务二那段直线的时间
 #define ROBOT_ROAD_TIME8 80 //完成任务二之后那个直道的时间
 
-#define ROBOT_TASK1_BALL_TARGET 134 //任务一闭环目标小球的位置
+#define ROBOT_TASK1_BALL_TARGET 170 //任务一闭环目标小球的位置
 #define ROBOT_TASK1_BALL_ERROR_TOLERANCE 3.0f //任务一位置误差容差
 #define ROBOT_TASK1_BALL_STABLE_TIME_MS 200U //误差持续在容差内的时间
 #define ROBOT_TASK1_MAXI_CMD_DELAY_MS 500U //进入任务一后延迟发送视觉命令的时间

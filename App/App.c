@@ -194,13 +194,13 @@ void App_Init(void)
     HAL_UART_Receive_IT(&huart1,&usart1_rx,1); //开启串口中断接收
 
 
-    Maxi_Send_cmd(0x05);
+    Maxi_Send_cmd(0x02);
 
     printf("Ready\n");
 
     //Robot_Tower_down();
     
-    
+    //Ray_on();
 }
 void App_Run(void)
 {
@@ -248,8 +248,10 @@ void App_Run(void)
             //printf("%d\n",now_y_data.line_error);
         }
             
-        //printf("%d,%d,%d\n",Maxi_posion_data.x,Maxi_posion_data.y,Maxi_posion_data.position);
+        printf("%d,%d,%d\n",Maxi_posion_data.x,Maxi_posion_data.y,Maxi_posion_data.position);
         //printf("%d\n",Emm_Read_Pulse_Count(0x01));
+
+        //Maxi_Send_cmd(0x01);
     }
     if(tim10_10ms_trigged_sign==1)
     {
