@@ -194,7 +194,7 @@ void App_Init(void)
     HAL_UART_Receive_IT(&huart1,&usart1_rx,1); //开启串口中断接收
 
 
-    Maxi_Send_cmd(0x01);
+    Maxi_Send_cmd(0x05);
 
     printf("Ready\n");
 
