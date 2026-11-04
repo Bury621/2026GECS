@@ -79,9 +79,9 @@ typedef enum{
 #define ROBOT_TASK1_TOWER_UP_WAIT_TIME 150 //塔吊上升后等待时间，单位10ms
 
 //原本是9 137 240
-#define ROBOT_TASK1_BACK_TIME1 15 //位置1的后退时间，单位10ms
-#define ROBOT_TASK1_BACK_TIME2 143 //位置2的后退时间，单位10ms
-#define ROBOT_TASK1_BACK_TIME3 246 //位置3的后退时间，单位10ms
+#define ROBOT_TASK1_BACK_TIME1 9 //位置1的后退时间，单位10ms
+#define ROBOT_TASK1_BACK_TIME2 126 //位置2的后退时间，单位10ms
+#define ROBOT_TASK1_BACK_TIME3 240 //位置3的后退时间，单位10ms
 
 #define ROBOT_TASK1_BUCKET_DMG_ANGLE 280 //排爆桶上方DMG6220目标角度
 #define ROBOT_TASK1_BUCKET_DMG_WAIT_TIME 300 //DMG转到排爆桶后的等待时间，单位10ms
@@ -91,8 +91,8 @@ typedef enum{
 #define ROBOT_TASK1_DMG_100_ANGLE 100 //最后的DMG6220目标角度
 #define ROBOT_TASK1_DMG_100_WAIT_TIME 200 //DMG转到100后的等待时间，单位10ms
 
-#define ROBOT_ROAD_PULSE1 15350 //任务二结束的第一条直道的计里程
-#define ROBOT_ROAD_PULSE2 32100 //任务二结束的第二条直道的计里程
+#define ROBOT_ROAD_PULSE1 14150 //任务二结束的第一条直道的计里程
+#define ROBOT_ROAD_PULSE2 31700 //任务二结束的第二条直道的计里程
 
 typedef enum{
     ROBOT_STAGE_WAIT_FOR_START=0,

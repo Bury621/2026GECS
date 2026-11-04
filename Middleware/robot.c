@@ -17,7 +17,7 @@
 /* 最大轮速 */
 #define WHEEL_MAX_SPEED  3000
 
-#define ROBOT_REMOTE_CONTROL_SPEED 80
+#define ROBOT_REMOTE_CONTROL_SPEED 100
 #define ROBOT_QUICK_TURN_REDIUS 125.0f
 /* 方向修正：1 保持，-1 取反，按实际调试修改 */
 static const int8_t dir_fix[4] = { 1, -1, 1, -1 };
@@ -69,8 +69,8 @@ static uint8_t robot_task1_dmg_started=0;
 
 /* 保存小车当前状态 */
 //static Robot_stage robot_now_stage=ROBOT_STAGE_WAIT_FOR_START; //完整赛程：发送start后从发车开始
-//static Robot_stage robot_now_stage=ROBOT_STAGE_TURN4; //调任务一
-static Robot_stage robot_now_stage=ROBOT_STAGE_TASK1_DMG_190_WAIT; //调任务二
+static Robot_stage robot_now_stage=ROBOT_STAGE_TURN4; //调任务一
+//static Robot_stage robot_now_stage=ROBOT_STAGE_TASK1_DMG_190_WAIT; //调任务二
 
 Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
 
@@ -497,15 +497,7 @@ uint8_t Robot_is_turning(hwt101_csx *hwt101, float target_angle)
 
     return (angle_diff < ROBOT_TURNING_JUJGUE_ANGLE_DEADBAND) ? 1 : 0;
 }
-void Robot_Tower_down(void)
-{
-    Emm_position_Mode(0x06,1000,0,131500,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
-}
 
-void Robot_Tower_up(void)
-{
-    Emm_position_Mode(0x06,1000,0,150,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
-}
 /**
  * @brief 机器人的时钟，在主循环里面10ms调用一次
  * 
@@ -705,7 +697,7 @@ void Robot_tick(void)
         
         robot_time=0; //清零
         robot_y_pid_is_open=1;
-        robot_y=40;
+        robot_y=41;
         robot_now_stage=ROBOT_STAGE_TASK1;
 
         DMG6220_MoveAngle(&dmg6220_t, 190, 120.0f);
@@ -1104,7 +1096,7 @@ void Robot_Claw_close(void)
 }
 void Robot_Claw_out1(void)
 {
-    Emm_position_Mode(0x05,80,0,1200,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x05,80,0,1620,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 void Robot_Claw_out2(void)
 {
@@ -1117,4 +1109,13 @@ void Robot_Claw_out3(void)
 void Robot_Claw_in(void)
 {
     Emm_position_Mode(0x05,80,0,0,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+}
+void Robot_Tower_down(void)
+{
+    Emm_position_Mode(0x06,1000,0,124500,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+}
+
+void Robot_Tower_up(void)
+{
+    Emm_position_Mode(0x06,1000,0,150,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }

@@ -137,9 +137,9 @@ void App_Init(void)
     robot_task1_ball_pid_t.T=0.1f;
 
     PIDController_Init(&robot_task2_target_pid_t);
-    robot_task2_target_pid_t.Kp=0.3f;
+    robot_task2_target_pid_t.Kp=0.4f;
     robot_task2_target_pid_t.Ki=0.01f;
-    robot_task2_target_pid_t.Kd=0.002f;
+    robot_task2_target_pid_t.Kd=0.00f;
     robot_task2_target_pid_t.tau=0.05f;
     robot_task2_target_pid_t.deadband=2;
     robot_task2_target_pid_t.limMin=-50.0f;
@@ -194,9 +194,11 @@ void App_Init(void)
     HAL_UART_Receive_IT(&huart1,&usart1_rx,1); //开启串口中断接收
 
 
-    Maxi_Send_cmd(0x02);
+    Maxi_Send_cmd(0x01);
 
     printf("Ready\n");
+
+    //DMG6220_MoveAngle(&dmg6220_t, 145, 120.0f);
 
     //Robot_Tower_down();
     
