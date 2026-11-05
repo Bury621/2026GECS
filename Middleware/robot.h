@@ -65,7 +65,7 @@
 
 #define ROBOT_ROAD_HOSTAGE_OFFSET_TIME 50 //任务三补偿时间
 #define ROBOT_TASK3_DMG_125_ANGLE 110 //伸出夹爪前将DMG转到125度
-#define ROBOT_TASK3_DMG_125_WAIT_TIME 135 //DMG转到125度后的等待时间，单位10ms
+#define ROBOT_TASK3_DMG_125_WAIT_TIME 50 //DMG转到125度后的等待时间，单位10ms
 #define ROBOT_TASK3_OUT3_WAIT_TIME 50 //夹爪伸出后等待时间，单位10ms
 #define ROBOT_TASK3_CLOSE_GRIPPER_WAIT_TIME 50 //夹爪闭合后等待时间，单位10ms
 #define ROBOT_TASK3_CLAW_IN_WAIT_TIME 50 //夹爪收回后等待时间，单位10ms
@@ -82,8 +82,8 @@ typedef enum{
     ROBOT_REMOTE_TO_STOP=255
 }Robot_remote_sign;
 
-#define ROBOT_TASK1_EXTEND_GRIPPER_WAIT_TIME 300 //夹爪伸出后等待时间，单位10ms
-#define ROBOT_TASK1_CLOSE_GRIPPER_WAIT_TIME 100 //夹爪闭合后等待时间，单位10ms
+#define ROBOT_TASK1_EXTEND_GRIPPER_WAIT_TIME 250 //夹爪伸出后等待时间，单位10ms
+#define ROBOT_TASK1_CLOSE_GRIPPER_WAIT_TIME 50 //夹爪闭合后等待时间，单位10ms
 #define ROBOT_TASK1_TOWER_UP_WAIT_TIME 150 //塔吊上升后等待时间，单位10ms
 
 //原本是9 137 240
@@ -92,8 +92,8 @@ typedef enum{
 #define ROBOT_TASK1_BACK_TIME3 230 //位置3的后退时间，单位10ms
 
 #define ROBOT_TASK1_BUCKET_DMG_ANGLE 280 //排爆桶上方DMG6220目标角度
-#define ROBOT_TASK1_BUCKET_DMG_WAIT_TIME 300 //DMG转到排爆桶后的等待时间，单位10ms
-#define ROBOT_TASK1_OPEN_GRIPPER_WAIT_TIME 100 //打开夹爪后等待时间，单位10ms
+#define ROBOT_TASK1_BUCKET_DMG_WAIT_TIME 150 //DMG转到排爆桶后的等待时间，单位10ms
+#define ROBOT_TASK1_OPEN_GRIPPER_WAIT_TIME 80 //打开夹爪后等待时间，单位10ms
 #define ROBOT_TASK1_DMG_190_ANGLE 190 //关闭夹爪后的DMG6220目标角度
 #define ROBOT_TASK1_DMG_190_WAIT_TIME 80 //DMG转到190后的等待时间，单位10ms
 #define ROBOT_TASK1_DMG_100_ANGLE 100 //最后的DMG6220目标角度
