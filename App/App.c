@@ -137,15 +137,15 @@ void App_Init(void)
     robot_task1_ball_pid_t.T=0.1f;
 
     PIDController_Init(&robot_task2_target_pid_t);
-    robot_task2_target_pid_t.Kp=0.4f;
-    robot_task2_target_pid_t.Ki=0.00f;
-    robot_task2_target_pid_t.Kd=0.00f;
+    robot_task2_target_pid_t.Kp=0.3f;
+    robot_task2_target_pid_t.Ki=0.01f;
+    robot_task2_target_pid_t.Kd=0.0f;
     robot_task2_target_pid_t.tau=0.05f;
     robot_task2_target_pid_t.deadband=2;
     robot_task2_target_pid_t.limMin=-50.0f;
     robot_task2_target_pid_t.limMax=50.0f;
-    robot_task2_target_pid_t.limMinInt=-20.0f;
-    robot_task2_target_pid_t.limMaxInt=20.0f;
+    robot_task2_target_pid_t.limMinInt=-50.0f;
+    robot_task2_target_pid_t.limMaxInt=50.0f;
     robot_task2_target_pid_t.T=0.1f;
 
     PIDController_Init(&robot_task3_hostage_pid_t);
