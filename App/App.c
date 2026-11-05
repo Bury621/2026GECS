@@ -22,16 +22,22 @@ static volatile float robot_diff_turn_target_angle_deg = 0.0f;
 static volatile uint8_t robot_diff_turn_start_request = 0;
 static volatile uint8_t robot_diff_turn_stop_request = 0;
 
-static volatile uint8_t btn2_pressed;
+static volatile uint8_t btn2_pressed; //BTN2：发车倒计时
+static volatile uint8_t btn1_pressed; //BTN1：赛前激光标定
 static uint8_t countdown;
 static uint32_t countdown_tick;
 static const char *countdown_text[] = {"GO", "1", "2", "3"};
 
+/* 按键序号：btn_inst数组下标，回调和扫描都用它区分是哪个键 */
+#define BTN_IDX_1 0U //BTN1在数组中的位置
+#define BTN_IDX_2 1U //BTN2在数组中的位置
+
 static void Button_ShortRelease(uint8_t btn_code);
 static uint8_t Button_ReadPin(const uint32_t *port, const uint32_t pin);
 
-static btn_instance_t btn2 = {
-    .port = (const uint32_t *)BTN2_GPIO_Port, .pin = BTN2_Pin,
+static btn_instance_t btn_inst[] = {
+    { .port = (const uint32_t *)BTN1_GPIO_Port, .pin = BTN1_Pin }, //BTN1：激光标定
+    { .port = (const uint32_t *)BTN2_GPIO_Port, .pin = BTN2_Pin }, //BTN2：发车倒计时
 };
 
 static btn_init_t button_init = {
@@ -81,7 +87,15 @@ static void Countdown_Update(void)
     }
 }
 
-static void Button_ShortRelease(uint8_t btn_code) { (void)btn_code; btn2_pressed = 1; }
+static void Button_ShortRelease(uint8_t btn_code)
+{
+    /* 回调在TIM10中断里执行，这里只置标志，具体流程放到主循环 */
+    if (btn_code == BTN_IDX_2) {
+        btn2_pressed = 1;
+    } else if (btn_code == BTN_IDX_1) {
+        btn1_pressed = 1;
+    }
+}
 
 static uint8_t Button_ReadPin(const uint32_t *port, const uint32_t pin)
 { return (uint8_t)!HAL_GPIO_ReadPin((GPIO_TypeDef *)port, (uint16_t)pin); }
@@ -166,7 +180,7 @@ void App_Init(void)
     ssd1306_WriteString("Bury666",Font_16x26,White);
     ssd1306_UpdateScreen(&hi2c2);
 
-    Button_Init(&button_init, &btn2, 1);
+    Button_Init(&button_init, btn_inst, sizeof(btn_inst) / sizeof(btn_inst[0]));
 
     hwt101_Init(&hwt101_t,&huart2);
     HAL_Delay(100);
@@ -206,6 +220,16 @@ void App_Init(void)
 }
 void App_Run(void)
 {
+    /* BTN1：赛前进入激光标定模式，把状态机入口设到 TASK1_DMG_190_WAIT 后正常跑赛程 */
+    if (btn1_pressed) {
+        btn1_pressed = 0;
+        if (!countdown && !debug_start_flag) {
+            if (Robot_start_laser_calibration() == 0) {
+                debug_start_flag = 1; //标定也走状态机，需要让Robot_tick跑起来
+            }
+        }
+    }
+
     Countdown_Update();
 
     DMG6220_Update(&dmg6220_t);

@@ -233,6 +233,31 @@ Get_yaw:1
 
 倒计时只在 `start` 标志尚未置位、且当前没有倒计时进行时才能触发，避免重复启动。
 
+### 9. 激光硬件位置标定
+
+标定模式不另写一套流程，而是**复用现有的任务状态机**：在**发车前**短按 **BTN1**（PG3），程序调用 `Robot_start_laser_calibration()`，把 `robot_now_stage` 设成 `ROBOT_STAGE_TASK1_DMG_190_WAIT`（就是 `robot.c` 里那行被注释掉的调试入口），然后正常往下跑：
+
+```text
+TASK1_DMG_190_WAIT → TASK1_DMG_100_WAIT → TASK1_DONE
+  → TASK2（发 Maxi_Send_cmd(0x02) 找标靶，视觉闭环对准）
+  → TASK2_DONE（Ray_on() 打激光，标定模式下直接 while(1) 卡住）
+```
+
+**标定模式下，`Ray_on()` 之后会进入 `while(1)` 一直卡住**：激光保持点亮、底盘保持停住、云台保持在 `ROBOT_TASK1_DMG_100_ANGLE`（100°），后面的流程不再执行。此时可以直接观察光斑在靶子上的实际位置来标定激光硬件安装；标完按复位键重新上电即可。
+
+要标定激光硬件位置时，看这一段 `Ray_on()` 打在靶子上的光斑即可。
+
+行为约定：
+
+- 只有发车前（`robot_now_stage` 仍是 `ROBOT_STAGE_WAIT_FOR_START`）能进入；已在跑赛中调用 `Robot_start_laser_calibration()` 会直接返回 1。
+- 进入时会清掉任务一/任务二/任务三的过程标志和计时，避免沿用残留值。
+- 进入后 `debug_start_flag` 会被置 1，让 `Robot_tick()` 正常推进。
+- `TASK2_DONE` 里靠 `robot_laser_cal_mode` 区分：标定模式卡住不返回，正常赛程仍然是 2000ms 后 `Ray_off()` 并继续下一段。
+- **正常发车不受影响**：BTN2 倒计时和 `start:1` 仍然从 `robot.c` 里的静态初值 `ROBOT_STAGE_WAIT_FOR_START` 开始。
+- 需要从别的状态调试，可以调 `Robot_jump_to_stage(stage)`。
+
+BTN2 仍然只负责发车倒计时，两个按键互不影响。
+
 ## 目录结构
 
 ```text

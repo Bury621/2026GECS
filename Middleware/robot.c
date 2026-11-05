@@ -70,7 +70,11 @@ static uint8_t robot_task1_dmg_started=0;
 /* 保存小车当前状态 */
 static Robot_stage robot_now_stage=ROBOT_STAGE_WAIT_FOR_START; //完整赛程：发送start后从发车开始
 //static Robot_stage robot_now_stage=ROBOT_STAGE_TURN4; //调任务一
-//static Robot_stage robot_now_stage=ROBOT_STAGE_TASK1_DMG_190_WAIT; //调任务二
+/* 调任务二/激光标定：不在这里改初值，改用 BTN1 触发 Robot_start_laser_calibration()，
+   它会把入口设成 ROBOT_STAGE_TASK1_DMG_190_WAIT，正常发车仍然从上面的初值开始 */
+
+/* 1表示当前处于激光标定模式：底盘锁死不动，TASK2_DONE打出激光后一直保持不关 */
+static volatile uint8_t robot_laser_cal_mode=0;
 
 Robot_remote_sign remote_sign=ROBOT_REMOTE_STOP; //遥控状态标志位
 
@@ -525,7 +529,6 @@ void Robot_tick(void)
     robot_time += elapsed;
 
 
-
     /* 初始状态：开始前进，然后进入发车后的直行计时 */
     if(robot_now_stage==ROBOT_STAGE_WAIT_FOR_START)
     {
@@ -582,7 +585,7 @@ void Robot_tick(void)
     /* 等待时间到：前进穿越障碍物，随后进入下一段直行计时 */
     else if(robot_now_stage==ROBOT_STAGE_THROUGH_OBSTACLE_WAIT && robot_time >= ROBOT_OBSTACLE_TURN_WAIT_TIME)
     {
-        Robot_set_move(130,0,0);
+        Robot_set_move(ROBOT_THOUGH_OBS_SPEED,0,0);
         robot_y_pid_is_open=0;
         Robot_set_vy(0);
         robot_time=0; //清零
@@ -939,7 +942,20 @@ void Robot_tick(void)
             robot_y_pid_is_open=0;
             Robot_set_vy(0);
             robot_task2_laser_on_start_tick=now;
-            //while(1);
+
+            /* 标定模式：打完激光就卡死在这里，激光一直亮着，车也不动 */
+            if(robot_laser_cal_mode)
+            {
+                Robot_set_move(0,0,0); //先停稳
+                while(1)
+                {
+                    /* 只维持激光点亮和云台目标，底盘已经停下不再发命令 */
+                    Ray_on();
+                    DMG6220_Update(&dmg6220_t);
+                    DMG6220_Service(&dmg6220_t);
+                    HAL_Delay(10);
+                }
+            }
         }
         else if((now-robot_task2_laser_on_start_tick) >= ROBOT_TASK2_LASER_ON_TIME_MS)
         {
@@ -1083,6 +1099,59 @@ void Robot_tick(void)
         robot_now_stage=ROBOT_STAGE_END;
         printf("end\n");
     }
+}
+
+/**
+ * @brief 直接设定状态机入口
+ *
+ * 把 robot_now_stage 改到指定状态，并清掉所有与本状态无关的计时，
+ * 让赛程从这一步开始往下正常跑。只在发车前允许调用。
+ */
+uint8_t Robot_jump_to_stage(Robot_stage stage)
+{
+    if(robot_now_stage!=ROBOT_STAGE_WAIT_FOR_START)
+    {
+        return 1; //赛程已经在跑，不再中途改入口
+    }
+
+    Robot_stop_move();
+    robot_y_pid_is_open=0;
+    Robot_set_vy(0);
+
+    /* 清掉任务一/任务二的过程标志，避免接着用上次的残留值 */
+    robot_time=0;
+    robot_task1_back_started=0;
+    robot_task1_dmg_started=0;
+    robot_task1_ball_stable_timing=0;
+    robot_task1_maxi_cmd_started=0;
+    robot_task2_target_stable_timing=0;
+    robot_task2_laser_on_timing=0;
+    robot_task3_hostage_stable_timing=0;
+    robot_task3_offset_started=0;
+    robot_task3_dmg_235_started=0;
+
+    robot_now_stage=stage;
+    return 0;
+}
+
+/**
+ * @brief 进入激光硬件位置标定模式
+ *
+ * 直接从 ROBOT_STAGE_TASK1_DMG_190_WAIT 开始跑赛程，走到 TASK2(找标靶) ->
+ * TASK2_DONE 执行 Ray_on() 后，因为标定模式会 while(1) 原地卡住：
+ * 激光常亮、车停住不动，方便对照靶子标定激光的硬件位置。
+ */
+uint8_t Robot_start_laser_calibration(void)
+{
+    if(Robot_jump_to_stage(ROBOT_STAGE_TASK1_DMG_190_WAIT)!=0)
+    {
+        return 1;
+    }
+
+    robot_laser_cal_mode=1; //标记标定模式，TASK2_DONE打完激光后会while(1)卡住
+    Ray_off();
+    printf("laser cal: start from TASK1_DMG_190_WAIT\n");
+    return 0;
 }
 
 void Robot_Claw_open(void)

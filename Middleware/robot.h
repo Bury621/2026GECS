@@ -30,7 +30,11 @@
 #define ROBOT_Y_ALIGN_TIME 200 //差速转弯后的横向闭环时间，单位10ms
 #define ROBOT_ROAD_TIME1 98
 #define ROBOT_ROAD_TIME2 56
-#define ROBOT_ROAD_TIME3 117
+
+
+#define ROBOT_ROAD_TIME3 180
+#define ROBOT_THOUGH_OBS_SPEED 80
+
 #define ROBOT_ROAD_TIME4 84
 //#define ROBOT_ROAD_TIME5 116
 #define ROBOT_STRAGE3_FORWARD_TIME1 132 //TURN4前直行前半段时间，单位10ms
@@ -50,6 +54,10 @@
 #define ROBOT_TASK2_TARGET_ERROR_TOLERANCE 3.0f //任务二位置误差容差
 #define ROBOT_TASK2_TARGET_STABLE_TIME_MS 200U //任务二误差持续在容差内的时间
 #define ROBOT_TASK2_LASER_ON_TIME_MS 2000U //任务二激光打开持续时间
+
+/* 激光标定模式：赛前标定激光硬件位置用。
+   发车前短按BTN1，状态机入口会被设到 ROBOT_STAGE_TASK1_DMG_190_WAIT，
+   后面的流程和正式赛程完全一样。 */
 
 #define ROBOT_TASK3_HOSTAGE_TARGET 400 //任务三闭环人质的位置
 #define ROBOT_TASK3_HOSTAGE_ERROR_TOLERANCE 6.0f //任务三人质位置误差容差
@@ -182,4 +190,24 @@ uint8_t Robot_start_differential_turn_ex(float radius_cm,
 
 void Robot_stop_differential_turn(void);
 uint8_t Robot_is_differential_turning(void);
+
+/**
+ * @brief 进入激光硬件位置标定模式
+ *
+ * 赛前使用，由BTN1短按触发。不另起流程，而是直接把状态机入口设成
+ * ROBOT_STAGE_TASK1_DMG_190_WAIT，让赛程从"DMG转到190后等待"这一步开始正常往下跑，
+ * 这样能找到标靶、执行 Ray_on() 并计时关激光，和正式比赛走同一套状态机。
+ * 正常发车（BTN2倒计时 / start:1）仍然从 robot.c 里的静态初值开始，不受影响。
+ * 赛程已经在跑时调用无效。
+ * @return 0 成功进入，1 赛程已在进行中
+ */
+uint8_t Robot_start_laser_calibration(void);
+
+/**
+ * @brief 直接设定状态机入口，赛前调试用
+ * @param stage 希望从哪个状态开始跑
+ * @return 0 成功，1 赛程已在进行中
+ */
+uint8_t Robot_jump_to_stage(Robot_stage stage);
+
 #endif
