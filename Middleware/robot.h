@@ -7,10 +7,17 @@
 #include <hwt101.h>
 #include <PID.h>
 
-#define ROBOT_QUICK_TURN_SPEED 25
+/* ==========================================================================
+ * 单位说明：凡带 _TIME 后缀的宏，单位都是 10ms 一个节拍（Robot_tick 的周期），
+ * 带 _MS 后缀的宏才是毫秒。几何量单位在各自注释里标注。
+ * ========================================================================== */
 
-#define ROBOT_MOVE_SET_MOTOR_DELAY 5
+/* ==========================================================================
+ * 1. 底盘运动 / 航向环
+ * ========================================================================== */
+#define ROBOT_MOVE_SET_MOTOR_DELAY 5 //四轮速度命令之间的间隔，单位ms
 
+#define ROBOT_QUICK_TURN_SPEED 25 //ROBOT_QUICK_TURN_REDIUS 半径下差速转弯的线速度
 #define ROBOT_TURNING_JUJGUE_ANGLE_DEADBAND 1 //角度误差多少以内认为旋转完成
 
 /* 差速转弯默认参数，实际线速度可通过 _ex 接口单独指定。
@@ -21,58 +28,99 @@
 #define ROBOT_DIFF_TURN_OMEGA_GAIN 100.0f
 #define ROBOT_DIFF_TURN_MIN_RADIUS_CM 0.1f
 #define ROBOT_DIFF_TURN_ANGLE_DEADBAND 1.0f
-#define ROBOT_DIFF_TURN_TIMEOUT_MS 30000U
+#define ROBOT_DIFF_TURN_TIMEOUT_MS 30000U //差速转弯超时，单位ms
 
-#define ROBOT_QR_BACK_TIME 190 //扫二维码后退时间，单位10ms
-#define ROBOT_QR_WAIT_TIME 150 //扫二维码等待时间，单位10ms
-#define ROBOT_QR_FORWARD_TIME 190 //扫二维码前进时间，单位10ms
-#define ROBOT_OBSTACLE_TURN_WAIT_TIME 100 //穿越障碍物前转弯等待时间，单位10ms
-#define ROBOT_Y_ALIGN_TIME 200 //差速转弯后的横向闭环时间，单位10ms
-#define ROBOT_ROAD_TIME1 98
-#define ROBOT_ROAD_TIME2 56
+/* ==========================================================================
+ * 2. 赛道直行 / 转弯计时（单位：10ms 节拍）
+ * ========================================================================== */
+#define ROBOT_ROAD_TIME1 98 //发车后第一段直行
+#define ROBOT_ROAD_TIME2 56 //第一段直道（TURN1后）
+#define ROBOT_ROAD_TIME3 180 //穿越障碍物后的直行（TURN2后）
+#define ROBOT_ROAD_TIME4 84 //二维码后的直行（TURN3后）
+//#define ROBOT_ROAD_TIME5 116 //已废弃，保留备查
+#define ROBOT_ROAD_TIME6 80 //当前未使用
+#define ROBOT_ROAD_TIME7 250 //从任务一到任务二那段直线
+#define ROBOT_ROAD_TIME8 80 //完成任务二之后那个直道（当前未使用）
 
+#define ROBOT_THOUGH_OBS_SPEED 80 //穿越障碍物时的前进速度（当前未使用）
 
-#define ROBOT_ROAD_TIME3 180
-#define ROBOT_THOUGH_OBS_SPEED 80
+#define ROBOT_STRAGE3_FORWARD_TIME1 132 //TURN4前直行前半段时间
+#define ROBOT_STRAGE3_FORWARD_TIME2 49 //TURN4前直行后半段时间
+#define ROBOT_Y_ALIGN_TIME 200 //差速转弯后的横向闭环时间
 
-#define ROBOT_ROAD_TIME4 84
-//#define ROBOT_ROAD_TIME5 116
-#define ROBOT_STRAGE3_FORWARD_TIME1 132 //TURN4前直行前半段时间，单位10ms
-#define ROBOT_STRAGE3_FORWARD_TIME2 49 //TURN4前直行后半段时间，单位10ms
+/* ==========================================================================
+ * 3. 扫二维码
+ * ========================================================================== */
+#define ROBOT_QR_BACK_TIME 190 //扫二维码后退时间
+#define ROBOT_QR_WAIT_TIME 150 //扫二维码等待时间
+#define ROBOT_QR_FORWARD_TIME 190 //扫二维码前进时间
+#define ROBOT_OBSTACLE_TURN_WAIT_TIME 100 //穿越障碍物前转弯等待时间
 
-#define ROBOT_ROAD_TIME6 80
+/* ==========================================================================
+ * 4. 任务一：抓小球
+ * ========================================================================== */
+#define ROBOT_TASK1_BALL_TARGET 120 //闭环目标小球的位置
+#define ROBOT_TASK1_BALL_ERROR_TOLERANCE 3.0f //位置误差容差
+#define ROBOT_TASK1_BALL_STABLE_TIME_MS 200U //误差持续在容差内的时间，单位ms
+#define ROBOT_TASK1_MAXI_CMD_DELAY_MS 500U //进入任务一后延迟发送视觉命令的时间，单位ms
 
-#define ROBOT_ROAD_TIME7 250 //从任务一到任务二那段直线的时间
-#define ROBOT_ROAD_TIME8 80 //完成任务二之后那个直道的时间
+#define ROBOT_TASK1_EXTEND_GRIPPER_WAIT_TIME 250 //夹爪伸出后等待时间
+#define ROBOT_TASK1_CLOSE_GRIPPER_WAIT_TIME 50 //夹爪闭合后等待时间
+#define ROBOT_TASK1_TOWER_UP_WAIT_TIME 150 //塔吊上升后等待时间
 
-#define ROBOT_TASK1_BALL_TARGET 120 //任务一闭环目标小球的位置
-#define ROBOT_TASK1_BALL_ERROR_TOLERANCE 3.0f //任务一位置误差容差
-#define ROBOT_TASK1_BALL_STABLE_TIME_MS 200U //误差持续在容差内的时间
-#define ROBOT_TASK1_MAXI_CMD_DELAY_MS 500U //进入任务一后延迟发送视觉命令的时间
+//原本是9 137 240
+#define ROBOT_TASK1_BACK_TIME1 9 //位置1的后退时间
+#define ROBOT_TASK1_BACK_TIME2 130 //位置2的后退时间
+#define ROBOT_TASK1_BACK_TIME3 230 //位置3的后退时间
 
-#define ROBOT_TASK2_TARGET_TARGET 300 //任务二闭环目标靶子的位置
-#define ROBOT_TASK2_TARGET_ERROR_TOLERANCE 3.0f //任务二位置误差容差
-#define ROBOT_TASK2_TARGET_STABLE_TIME_MS 200U //任务二误差持续在容差内的时间
-#define ROBOT_TASK2_LASER_ON_TIME_MS 2000U //任务二激光打开持续时间
+#define ROBOT_TASK1_BUCKET_DMG_ANGLE 280 //排爆桶上方DMG6220目标角度
+#define ROBOT_TASK1_BUCKET_DMG_WAIT_TIME 170 //DMG转到排爆桶后的等待时间
+#define ROBOT_TASK1_OPEN_GRIPPER_WAIT_TIME 80 //打开夹爪后等待时间
+#define ROBOT_TASK1_DMG_190_ANGLE 190 //关闭夹爪后的DMG6220目标角度
+#define ROBOT_TASK1_DMG_190_WAIT_TIME 80 //DMG转到190后的等待时间
+#define ROBOT_TASK1_DMG_100_ANGLE 100 //最后的DMG6220目标角度
+#define ROBOT_TASK1_DMG_100_WAIT_TIME 200 //DMG转到100后的等待时间
 
-/* 激光标定模式：赛前标定激光硬件位置用。
-   发车前短按BTN1，状态机入口会被设到 ROBOT_STAGE_TASK1_DMG_190_WAIT，
-   后面的流程和正式赛程完全一样。 */
+/* ==========================================================================
+ * 5. 任务二：打激光标靶 + 激光标定模式
+ * ========================================================================== */
+#define ROBOT_TASK2_TARGET_TARGET 300 //闭环目标靶子的位置
+#define ROBOT_TASK2_TARGET_ERROR_TOLERANCE 3.0f //位置误差容差
+#define ROBOT_TASK2_TARGET_STABLE_TIME_MS 200U //误差持续在容差内的时间，单位ms
+#define ROBOT_TASK2_LASER_ON_TIME_MS 2000U //正常赛程激光打开持续时间，单位ms
 
-#define ROBOT_TASK3_HOSTAGE_TARGET 400 //任务三闭环人质的位置
-#define ROBOT_TASK3_HOSTAGE_ERROR_TOLERANCE 6.0f //任务三人质位置误差容差
-#define ROBOT_TASK3_HOSTAGE_STABLE_TIME_MS 200U //任务三误差持续在容差内的时间
+/* 激光硬件位置标定模式：赛前标定激光安装位置用。
+   发车前短按 BTN1，状态机入口会被设到 ROBOT_STAGE_TASK1_DMG_190_WAIT，
+   走到 TASK2_DONE 执行 Ray_on() 之后 while(1) 卡住：激光常亮、车不动，
+   方便对照靶子标定激光硬件位置。标完按复位键即可。 */
 
-#define ROBOT_ROAD_HOSTAGE_OFFSET_TIME 50 //任务三补偿时间
+/* ==========================================================================
+ * 6. 任务二 -> 任务三 段里程
+ * ========================================================================== */
+#define ROBOT_ROAD_PULSE1 14050 //任务二结束的第一条直道的计里程
+#define ROBOT_ROAD_PULSE2 32200 //任务二结束的第二条直道的计里程
+
+/* ==========================================================================
+ * 7. 任务三：救人质
+ * ========================================================================== */
+#define ROBOT_TASK3_HOSTAGE_TARGET 400 //闭环人质的位置
+#define ROBOT_TASK3_HOSTAGE_ERROR_TOLERANCE 6.0f //人质位置误差容差
+#define ROBOT_TASK3_HOSTAGE_STABLE_TIME_MS 200U //误差持续在容差内的时间，单位ms
+
+#define ROBOT_ROAD_HOSTAGE_OFFSET_TIME 50 //补偿夹爪位置的短距离前进时间
 #define ROBOT_TASK3_DMG_125_ANGLE 110 //伸出夹爪前将DMG转到125度
-#define ROBOT_TASK3_DMG_125_WAIT_TIME 50 //DMG转到125度后的等待时间，单位10ms
-#define ROBOT_TASK3_OUT3_WAIT_TIME 50 //夹爪伸出后等待时间，单位10ms
-#define ROBOT_TASK3_CLOSE_GRIPPER_WAIT_TIME 50 //夹爪闭合后等待时间，单位10ms
-#define ROBOT_TASK3_CLAW_IN_WAIT_TIME 50 //夹爪收回后等待时间，单位10ms
+#define ROBOT_TASK3_DMG_125_WAIT_TIME 50 //DMG转到125度后的等待时间
+#define ROBOT_TASK3_OUT3_WAIT_TIME 50 //夹爪伸出后等待时间
+#define ROBOT_TASK3_CLOSE_GRIPPER_WAIT_TIME 50 //夹爪闭合后等待时间
+#define ROBOT_TASK3_CLAW_IN_WAIT_TIME 50 //夹爪收回后等待时间
 #define ROBOT_TASK3_DMG_190_ANGLE 190 //任务三最后的DMG6220目标角度
 #define ROBOT_TASK3_TO_END_DMG_235_ANGLE 235 //前往终点后DMG6220目标角度
-#define ROBOT_TASK3_TO_END_DMG_235_DELAY_TIME 50 //进入前往终点状态后的等待时间，单位10ms
-#define ROBOT_ROAD_TO_END_TIME 150 //夹取完成后前往终点的时间，单位10ms
+#define ROBOT_TASK3_TO_END_DMG_235_DELAY_TIME 50 //进入前往终点状态后的等待时间
+#define ROBOT_ROAD_TO_END_TIME 150 //夹取完成后前往终点的时间（当前未使用）
+
+/* ==========================================================================
+ * 8. 枚举类型
+ * ========================================================================== */
 typedef enum{
     ROBOT_REMOTE_STOP=0,
     ROBOT_REMOTE_FORWARD,
@@ -81,26 +129,6 @@ typedef enum{
     ROBOT_REMOTE_RIGHT,
     ROBOT_REMOTE_TO_STOP=255
 }Robot_remote_sign;
-
-#define ROBOT_TASK1_EXTEND_GRIPPER_WAIT_TIME 250 //夹爪伸出后等待时间，单位10ms
-#define ROBOT_TASK1_CLOSE_GRIPPER_WAIT_TIME 50 //夹爪闭合后等待时间，单位10ms
-#define ROBOT_TASK1_TOWER_UP_WAIT_TIME 150 //塔吊上升后等待时间，单位10ms
-
-//原本是9 137 240
-#define ROBOT_TASK1_BACK_TIME1 9 //位置1的后退时间，单位10ms
-#define ROBOT_TASK1_BACK_TIME2 130 //位置2的后退时间，单位10ms
-#define ROBOT_TASK1_BACK_TIME3 230 //位置3的后退时间，单位10ms
-
-#define ROBOT_TASK1_BUCKET_DMG_ANGLE 280 //排爆桶上方DMG6220目标角度
-#define ROBOT_TASK1_BUCKET_DMG_WAIT_TIME 150 //DMG转到排爆桶后的等待时间，单位10ms
-#define ROBOT_TASK1_OPEN_GRIPPER_WAIT_TIME 80 //打开夹爪后等待时间，单位10ms
-#define ROBOT_TASK1_DMG_190_ANGLE 190 //关闭夹爪后的DMG6220目标角度
-#define ROBOT_TASK1_DMG_190_WAIT_TIME 80 //DMG转到190后的等待时间，单位10ms
-#define ROBOT_TASK1_DMG_100_ANGLE 100 //最后的DMG6220目标角度
-#define ROBOT_TASK1_DMG_100_WAIT_TIME 200 //DMG转到100后的等待时间，单位10ms
-
-#define ROBOT_ROAD_PULSE1 14050 //任务二结束的第一条直道的计里程
-#define ROBOT_ROAD_PULSE2 32200 //任务二结束的第二条直道的计里程
 
 typedef enum{
     ROBOT_STAGE_WAIT_FOR_START=0,
@@ -153,25 +181,22 @@ typedef enum{
     ROBOT_DIFFERENTIAL_TURN_DONE
 }Robot_differential_turn_state;
 
+/* ==========================================================================
+ * 9. 函数声明
+ * ========================================================================== */
+/* --- 底盘运动 --- */
 void Robot_set_move(int16_t vx,int16_t vy,int16_t omega);
 void Robot_set_vx(int16_t vx);
 void Robot_set_vy(int16_t vy);
 void Robot_set_omega(int16_t omega);
-void Robot_Angle_Update(hwt101_csx *hwt101, PIDController *pid, uint16_t target_angle);
 void Robot_stop_move(void);
 void Robot_remote_control(void);
-void Robot_tick(void);
-void Robot_Claw_open(void);
-void Robot_Claw_close(void);
-void Robot_Tower_down(void);
-void Robot_Tower_middle(void);
-void Robot_Tower_up(void);
-void Robot_Claw_out1(void);
-void Robot_Claw_in(void);
-void Robot_Claw_out2(void);
-void Robot_Claw_out3(void);
+
+/* --- 航向环 --- */
+void Robot_Angle_Update(hwt101_csx *hwt101, PIDController *pid, uint16_t target_angle);
 uint8_t Robot_is_turning(hwt101_csx *hwt101, float target_angle);
 
+/* --- 差速转弯 --- */
 /**
  * @brief 开始一次差速转弯
  * @param radius_cm 转弯半径，单位 cm，0 表示原地差速旋转
@@ -191,17 +216,8 @@ uint8_t Robot_start_differential_turn_ex(float radius_cm,
 void Robot_stop_differential_turn(void);
 uint8_t Robot_is_differential_turning(void);
 
-/**
- * @brief 进入激光硬件位置标定模式
- *
- * 赛前使用，由BTN1短按触发。不另起流程，而是直接把状态机入口设成
- * ROBOT_STAGE_TASK1_DMG_190_WAIT，让赛程从"DMG转到190后等待"这一步开始正常往下跑，
- * 这样能找到标靶、执行 Ray_on() 并计时关激光，和正式比赛走同一套状态机。
- * 正常发车（BTN2倒计时 / start:1）仍然从 robot.c 里的静态初值开始，不受影响。
- * 赛程已经在跑时调用无效。
- * @return 0 成功进入，1 赛程已在进行中
- */
-uint8_t Robot_start_laser_calibration(void);
+/* --- 任务状态机 --- */
+void Robot_tick(void);
 
 /**
  * @brief 直接设定状态机入口，赛前调试用
@@ -209,5 +225,28 @@ uint8_t Robot_start_laser_calibration(void);
  * @return 0 成功，1 赛程已在进行中
  */
 uint8_t Robot_jump_to_stage(Robot_stage stage);
+
+/**
+ * @brief 进入激光硬件位置标定模式
+ *
+ * 赛前使用，由BTN1短按触发。直接把状态机入口设成 ROBOT_STAGE_TASK1_DMG_190_WAIT，
+ * 让赛程从"DMG转到190后等待"这一步开始正常往下跑，走到 TASK2 找标靶、
+ * TASK2_DONE 执行 Ray_on()，之后就 while(1) 卡住：激光常亮、车不动。
+ * 正常发车（BTN2倒计时 / start:1）仍然从 robot.c 里的静态初值开始，不受影响。
+ * 赛程已经在跑时调用无效。
+ * @return 0 成功进入，1 赛程已在进行中
+ */
+uint8_t Robot_start_laser_calibration(void);
+
+/* --- 机械爪 / 塔吊 --- */
+void Robot_Claw_open(void);
+void Robot_Claw_close(void);
+void Robot_Tower_down(void);
+void Robot_Tower_middle(void);
+void Robot_Tower_up(void);
+void Robot_Claw_out1(void);
+void Robot_Claw_in(void);
+void Robot_Claw_out2(void);
+void Robot_Claw_out3(void);
 
 #endif
