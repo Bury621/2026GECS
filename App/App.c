@@ -163,13 +163,13 @@ void App_Init(void)
     robot_task2_target_pid_t.T=0.1f;
 
     PIDController_Init(&robot_task3_hostage_pid_t);
-    robot_task3_hostage_pid_t.Kp=0.3f;
+    robot_task3_hostage_pid_t.Kp=0.2f;
     robot_task3_hostage_pid_t.Ki=0.015f;
     robot_task3_hostage_pid_t.Kd=0.001f;
     robot_task3_hostage_pid_t.tau=0.05f;
     robot_task3_hostage_pid_t.deadband=2;
-    robot_task3_hostage_pid_t.limMin=-50.0f;
-    robot_task3_hostage_pid_t.limMax=50.0f;
+    robot_task3_hostage_pid_t.limMin=-30.0f;
+    robot_task3_hostage_pid_t.limMax=30.0f;
     robot_task3_hostage_pid_t.limMinInt=-20.0f;
     robot_task3_hostage_pid_t.limMaxInt=20.0f;
     robot_task3_hostage_pid_t.T=0.1f;
@@ -212,6 +212,7 @@ void App_Init(void)
 
     printf("Ready\n");
 
+ 
     //DMG6220_MoveAngle(&dmg6220_t, 145, 120.0f);
 
     //Robot_Tower_down();

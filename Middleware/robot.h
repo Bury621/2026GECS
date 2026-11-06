@@ -36,7 +36,7 @@
 #define ROBOT_ROAD_TIME1 98 //发车后第一段直行
 #define ROBOT_ROAD_TIME2 56 //第一段直道（TURN1后）
 #define ROBOT_ROAD_TIME3 180 //穿越障碍物后的直行（TURN2后）
-#define ROBOT_ROAD_TIME4 84 //二维码后的直行（TURN3后）
+#define ROBOT_ROAD_TIME4 87 //二维码后的直行（TURN3后）
 //#define ROBOT_ROAD_TIME5 116 //已废弃，保留备查
 #define ROBOT_ROAD_TIME6 80 //当前未使用
 #define ROBOT_ROAD_TIME7 250 //从任务一到任务二那段直线
@@ -71,7 +71,7 @@
 //原本是9 137 240
 #define ROBOT_TASK1_BACK_TIME1 9 //位置1的后退时间
 #define ROBOT_TASK1_BACK_TIME2 130 //位置2的后退时间
-#define ROBOT_TASK1_BACK_TIME3 230 //位置3的后退时间
+#define ROBOT_TASK1_BACK_TIME3 236 //位置3的后退时间
 
 #define ROBOT_TASK1_BUCKET_DMG_ANGLE 280 //排爆桶上方DMG6220目标角度
 #define ROBOT_TASK1_BUCKET_DMG_WAIT_TIME 170 //DMG转到排爆桶后的等待时间
