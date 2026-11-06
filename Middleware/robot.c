@@ -1161,7 +1161,7 @@ void Robot_Claw_open(void)
 
 void Robot_Claw_close(void)
 {
-    Servo_Set(42);
+    Servo_Set(39);
 }
 void Robot_Claw_out1(void)
 {

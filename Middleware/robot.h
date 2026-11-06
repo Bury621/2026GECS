@@ -103,11 +103,11 @@
 /* ==========================================================================
  * 7. 任务三：救人质
  * ========================================================================== */
-#define ROBOT_TASK3_HOSTAGE_TARGET 400 //闭环人质的位置
+#define ROBOT_TASK3_HOSTAGE_TARGET 300 //闭环人质的位置
 #define ROBOT_TASK3_HOSTAGE_ERROR_TOLERANCE 6.0f //人质位置误差容差
 #define ROBOT_TASK3_HOSTAGE_STABLE_TIME_MS 200U //误差持续在容差内的时间，单位ms
 
-#define ROBOT_ROAD_HOSTAGE_OFFSET_TIME 50 //补偿夹爪位置的短距离前进时间
+#define ROBOT_ROAD_HOSTAGE_OFFSET_TIME 27 //补偿夹爪位置的短距离前进时间
 #define ROBOT_TASK3_DMG_125_ANGLE 110 //伸出夹爪前将DMG转到125度
 #define ROBOT_TASK3_DMG_125_WAIT_TIME 50 //DMG转到125度后的等待时间
 #define ROBOT_TASK3_OUT3_WAIT_TIME 50 //夹爪伸出后等待时间
