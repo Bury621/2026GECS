@@ -1165,15 +1165,15 @@ void Robot_Claw_close(void)
 }
 void Robot_Claw_out1(void)
 {
-    Emm_position_Mode(0x05,80,0,1620,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x05,80,0,1820,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 void Robot_Claw_out2(void)
 {
-    Emm_position_Mode(0x05,80,0,2850,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x05,80,0,3050,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 void Robot_Claw_out3(void)
 {
-    Emm_position_Mode(0x05,80,0,30,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
+    Emm_position_Mode(0x05,80,0,230,EMM_MODE_ABSOLUTE,EMM_SYNC_DISABLE);
 }
 void Robot_Claw_in(void)
 {
