@@ -69,7 +69,7 @@
 #define ROBOT_TASK1_TOWER_UP_WAIT_TIME 150 //塔吊上升后等待时间
 
 //原本是9 137 240
-#define ROBOT_TASK1_BACK_TIME1 9 //位置1的后退时间
+#define ROBOT_TASK1_BACK_TIME1 11 //位置1的后退时间
 #define ROBOT_TASK1_BACK_TIME2 130 //位置2的后退时间
 #define ROBOT_TASK1_BACK_TIME3 236 //位置3的后退时间
 

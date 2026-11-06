@@ -163,7 +163,7 @@ void App_Init(void)
     robot_task2_target_pid_t.T=0.1f;
 
     PIDController_Init(&robot_task3_hostage_pid_t);
-    robot_task3_hostage_pid_t.Kp=0.2f;
+    robot_task3_hostage_pid_t.Kp=0.3f;
     robot_task3_hostage_pid_t.Ki=0.015f;
     robot_task3_hostage_pid_t.Kd=0.001f;
     robot_task3_hostage_pid_t.tau=0.05f;
