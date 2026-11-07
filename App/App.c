@@ -165,7 +165,7 @@ void App_Init(void)
     PIDController_Init(&robot_task3_hostage_pid_t);
     robot_task3_hostage_pid_t.Kp=0.2f;
     robot_task3_hostage_pid_t.Ki=0.015f;
-    robot_task3_hostage_pid_t.Kd=0.001f;
+    robot_task3_hostage_pid_t.Kd=0.002f;
     robot_task3_hostage_pid_t.tau=0.05f;
     robot_task3_hostage_pid_t.deadband=2;
     robot_task3_hostage_pid_t.limMin=-30.0f;
